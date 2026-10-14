@@ -161,12 +161,12 @@ chmod +x test-pg17.sh
 aws secretsmanager create-secret \
     --name rds/postgres/master-password \
     --description "RDS PostgreSQL master password" \
-    --secret-string "REPLACE_WITH_YOUR_ACTUAL_PASSWORD"
+    --secret-string "your-actual-password"
 
 # Or update existing secret
 aws secretsmanager update-secret \
     --secret-id rds/postgres/master-password \
-    --secret-string "REPLACE_WITH_YOUR_ACTUAL_PASSWORD"
+    --secret-string "your-actual-password"
 ```
 
 ### Retrieve Password in Script

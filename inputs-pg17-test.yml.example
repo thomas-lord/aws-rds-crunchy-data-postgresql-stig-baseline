@@ -12,7 +12,8 @@ windows_runner: false
 pg_dba: 'postgres'
 
 # Database Admin Password (CHANGE THIS!)
-pg_dba_password: 'REPLACE_WITH_YOUR_ACTUAL_PASSWORD'
+# Example: 'MyS3cur3P@ssw0rd!' or use environment variable
+pg_dba_password: 'your-secure-password-here'
 
 # Database Hostname (RDS Endpoint)
 pg_host: 'your-instance.region.rds.amazonaws.com'
