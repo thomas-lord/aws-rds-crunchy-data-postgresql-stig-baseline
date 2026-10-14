@@ -125,36 +125,31 @@ pg_max_connections: 100
 pg_timezone: 'UTC'
 ```
 
-# Running This Baseline Directly from Github
+## Running This Baseline
 
-```
-# How to run
-inspec exec https://github.com/mitre/aws-rds-crunchy-data-postgresql-stig-baseline/archive/master.tar.gz --input-file=<path_to_your_inputs_file/name_of_your_inputs_file.yml> --reporter=json:<path_to_your_output_file/name_of_your_output_file.json>
-```
+Clone the profile to your local system:
 
-### Different Run Options
-
-  [Full exec options](https://docs.chef.io/inspec/cli/#options-3)
-
-## Running This Baseline from a local Archive copy 
-
-If your runner is not always expected to have direct access to GitHub, use the following steps to create an archive bundle of this baseline and all of its dependent tests:
-
-(Git is required to clone the InSpec profile using the instructions below. Git can be downloaded from the [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) site.)
-
-When the __"runner"__ host uses this profile baseline for the first time, follow these steps: 
-
-```
-mkdir profiles
-cd profiles
-git clone https://github.com/mitre/aws-rds-crunchy-data-postgresql-stig-baseline
-inspec archive aws-rds-crunchy-data-postgresql-stig-baseline
-inspec exec <name of generated archive> -t ssh:// --input-file=<path_to_your_inputs_file/name_of_your_inputs_file.yml> --reporter=cli json:<path_to_your_output_file/name_of_your_output_file.json>
-```
-For every successive run, follow these steps to always have the latest version of this baseline:
-
-```
+```bash
+git clone <your-fork-url>
 cd aws-rds-crunchy-data-postgresql-stig-baseline
+```
+
+Create your inputs file:
+
+```bash
+cp inputs-pg17-test.yml.example inputs.yml
+# Edit inputs.yml with your database credentials
+```
+
+Run the profile:
+
+```bash
+inspec exec . --input-file=inputs.yml --reporter=cli json:results.json
+```
+
+For subsequent runs, update the profile:
+
+```bash
 git pull
 cd ..
 inspec archive aws-rds-crunchy-data-postgresql-stig-baseline --overwrite
