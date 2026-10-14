@@ -5,6 +5,7 @@ InSpec profile (overlay) to validate the secure configuration of AWS RDS hosted 
 - Profile Version: **3.2.0**
 - Benchmark Date: **10 Jul 2026**
 - Benchmark Version: **Version 1 Release 3 (V1R3)**
+- **Supported Platforms:** Linux, macOS
 
 > [!Note]
 > This Profile applies to database versions 10, 11, 12, 13, 14, 15, 16, 17
