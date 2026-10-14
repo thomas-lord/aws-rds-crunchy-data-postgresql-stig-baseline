@@ -1,0 +1,165 @@
+# PostgreSQL 17.8 STIG Profile - Example Inputs File
+# Copy this file to inputs-pg17-test.yml and update with your values
+
+# ============================================================================
+# CONNECTION SETTINGS
+# ============================================================================
+
+# Windows or Linux Runner (default: false for Linux/macOS)
+windows_runner: false
+
+# Database Admin User
+pg_dba: 'postgres'
+
+# Database Admin Password (CHANGE THIS!)
+pg_dba_password: 'REPLACE_WITH_YOUR_ACTUAL_PASSWORD'
+
+# Database Hostname (RDS Endpoint)
+pg_host: 'your-instance.region.rds.amazonaws.com'
+
+# Database Name
+pg_db: 'postgres'
+
+# Database Port
+pg_port: 5432
+
+# ============================================================================
+# VERSION INFORMATION
+# ============================================================================
+
+# PostgreSQL Version (e.g., 17.8)
+pg_version: '17.8'
+
+# ============================================================================
+# USER ACCOUNTS
+# ============================================================================
+
+# Authorized PostgreSQL Users
+# Include all users that should exist in the database
+pg_users:
+  - "postgres"
+  - "rds_iam"
+  - "rds_pgaudit"
+  - "rds_replication"
+  - "rds_superuser"
+  - "rdsadmin"
+  - "rdsrepladmin"
+
+# Authorized Superuser Accounts
+# These are accounts that are allowed to have superuser privileges
+pg_superusers:
+  - "rdsadmin"
+
+# RDS Superusers
+# Members of the rds_superusers role
+rds_superusers:
+  - "postgres"
+
+# System Resource Users (for V-233520, V-233523)
+# Members that have logical access to information and system resources
+pg_system_resource_users:
+  - "postgres"
+  - "rds_superuser"
+
+# ============================================================================
+# SYSTEM SETTINGS
+# ============================================================================
+
+# System User of PostgreSQL Process
+pg_owner: "postgres"
+
+# System Group of PostgreSQL Process
+pg_group: "postgres"
+
+# ============================================================================
+# EXTENSIONS
+# ============================================================================
+
+# Approved Database Extensions
+approved_ext:
+  - "pgaudit"
+
+# Approved PostgreSQL Packages (usually empty for RDS)
+approved_packages: []
+
+# ============================================================================
+# POSTGRESQL CONFIGURATION
+# ============================================================================
+
+# Maximum Number of Connections
+pg_max_connections: 100
+
+# Timezone Setting
+pg_timezone: 'UTC'
+
+# SSL Setting
+pg_ssl: 'on'
+
+# ============================================================================
+# AUDIT CONFIGURATION
+# ============================================================================
+
+# pgaudit Log Items
+# What types of statements to audit
+pgaudit_log_items:
+  - 'ddl'    # Data Definition Language (CREATE, ALTER, DROP)
+  - 'role'   # Role and privilege changes
+  - 'read'   # SELECT statements
+  - 'write'  # INSERT, UPDATE, DELETE
+
+# pgaudit Log Line Items
+# What information to include in log lines
+pgaudit_log_line_items:
+  - '%m'  # Timestamp with milliseconds
+  - '%u'  # User name
+  - '%c'  # Session ID
+  - '%d'  # Database name
+  - '%p'  # Process ID
+  - '%r'  # Remote host and port
+
+# ============================================================================
+# REPLICATION (if applicable)
+# ============================================================================
+
+# PostgreSQL Replicas
+# List of replica IP addresses (empty if no replicas)
+pg_replicas: []
+
+# ============================================================================
+# OBJECT PRIVILEGES (for V-233546)
+# ============================================================================
+
+# Object Granted Privileges
+pg_object_granted_privileges: 'arwdDxt'
+
+# Object Public Privileges
+pg_object_public_privileges: 'r'
+
+# Object Exceptions
+# Objects that are exceptions to the privilege rules
+pg_object_exceptions: []
+
+# ============================================================================
+# NOTES
+# ============================================================================
+#
+# 1. SECURITY: Never commit this file with real credentials to version control
+#    - Add inputs-pg17-test.yml to .gitignore
+#    - Use environment variables or secrets management for production
+#
+# 2. RDS SPECIFIC:
+#    - rdsadmin is the AWS RDS superuser (cannot be removed)
+#    - Some OS-level controls will be skipped (AWS manages the OS)
+#    - Ensure pgaudit extension is installed in your RDS instance
+#
+# 3. TESTING:
+#    - Test connectivity with psql before running InSpec
+#    - Start with a single control test (V-233596)
+#    - Review TESTING_GUIDE.md for detailed instructions
+#
+# 4. CUSTOMIZATION:
+#    - Adjust pg_users list based on your environment
+#    - Update approved_ext if you use additional extensions
+#    - Modify audit settings based on your requirements
+#
+# ============================================================================

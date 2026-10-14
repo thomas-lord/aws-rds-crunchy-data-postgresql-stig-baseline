@@ -2,16 +2,22 @@
 
 InSpec profile (overlay) to validate the secure configuration of AWS RDS hosted PostgreSQL Database to validate compliancy with [Department of Defense (DoD) STIG](https://public.cyber.mil/stigs/) `Crunchy Data PostgreSQL` Security Technical Implementation Guide (STIG) requirements.
 
-- Profile Version: **3.1.0**
+- Profile Version: **3.2.0**
 - Benchmark Date: **24 Jul 2024**
 - Benchmark Version: **Version 3 Release 1 (V3R1)**
 
 > [!Note]
-> This Profile applies to database versions 10, 11, 12, 13, 14, 15
+> This Profile applies to database versions 10, 11, 12, 13, 14, 15, 16, 17
 
 ## Getting Started  
 
-It is intended and recommended that InSpec and this profile overlay be run from a __"runner"__ host (such as a DevOps orchestration server, an administrative management system, or a developer's workstation/laptop) against the target. This can be any Unix/Linux/MacOS or Windows runner host, with access to the Internet.
+> **🚀 Quick Start Guides:**
+> - **AWS CloudShell:** See [README_CLOUDSHELL.md](README_CLOUDSHELL.md) for one-command setup
+> - **Linux:** See [LINUX_CLOUDSHELL_SETUP.md](LINUX_CLOUDSHELL_SETUP.md) for platform-specific instructions
+> - **All Platforms:** See [QUICK_START.md](QUICK_START.md) for general quick start
+> - **Comprehensive Guide:** See [TESTING_GUIDE.md](TESTING_GUIDE.md) for detailed testing instructions
+
+It is intended and recommended that InSpec and this profile overlay be run from a __"runner"__ host (such as a DevOps orchestration server, an administrative management system, a developer's workstation/laptop, or AWS CloudShell) against the target. This can be any Unix/Linux/MacOS or Windows runner host, with access to the Internet.
 
 __For the best security of the runner, always install on the runner the _latest version_ of InSpec__ 
 
@@ -74,7 +80,7 @@ windows_runner: false
 # Description: 'Postgres database admin user (e.g., 'postgres').'
 pg_dba: '<master user, e.g., postgres>'
 
-# Description: 'Postgres database admin password (e.g., 'tesT$4329uyskdj!kjh').'
+# Description: 'Postgres database admin password'
 pg_dba_password: '<password>'
 
 # Description: 'Postgres database hostname'
@@ -98,7 +104,7 @@ approved_packages: []
 # Description: 'Postgres super users (e.g., ['postgres']).'
 pg_superusers: []
 
-# Description: 'Database version' (e.g., 12.9)
+# Description: 'Database version' (e.g., 12.9, 17.8)
 pg_version: ''
 
 # Description: 'Postgres ssl setting (e.g., 'on').'
