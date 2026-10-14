@@ -79,7 +79,7 @@ aws rds create-db-instance \
     --engine postgres \
     --engine-version 17.8 \
     --master-username postgres \
-    --master-user-password 'YourSecurePassword123!' \
+    --master-user-password 'REPLACE_WITH_SECURE_PASSWORD' \
     --allocated-storage 20 \
     --vpc-security-group-ids sg-xxxxxxxx \
     --db-subnet-group-name your-subnet-group \
@@ -122,7 +122,7 @@ Create a file named `inputs-pg17-test.yml`:
 ```yaml
 # Connection Settings
 pg_dba: 'postgres'
-pg_dba_password: 'YourSecurePassword123!'
+pg_dba_password: 'REPLACE_WITH_YOUR_PASSWORD'
 pg_host: 'your-instance.region.rds.amazonaws.com'
 pg_db: 'postgres'
 pg_port: 5432
@@ -202,7 +202,7 @@ pg_object_exceptions: []
 
 ```bash
 # Set password as environment variable
-export PG_DBA_PASSWORD='YourSecurePassword123!'
+export PG_DBA_PASSWORD='REPLACE_WITH_YOUR_PASSWORD'
 
 # Modify inputs file to use environment variable
 # In inputs-pg17-test.yml, change:
@@ -215,7 +215,7 @@ export PG_DBA_PASSWORD='YourSecurePassword123!'
 # Store password in Secrets Manager
 aws secretsmanager create-secret \
     --name pg17-test-password \
-    --secret-string 'YourSecurePassword123!'
+    --secret-string 'REPLACE_WITH_YOUR_PASSWORD'
 
 # Retrieve in script
 export PG_DBA_PASSWORD=$(aws secretsmanager get-secret-value \

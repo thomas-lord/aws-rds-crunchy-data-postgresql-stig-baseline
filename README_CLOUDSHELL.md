@@ -181,7 +181,7 @@ aws rds describe-db-instances --query 'DBInstances[*].DBInstanceIdentifier'
 # Create secret
 aws secretsmanager create-secret \
     --name rds/postgres/master-password \
-    --secret-string "YourSecurePassword123!"
+    --secret-string "REPLACE_WITH_YOUR_ACTUAL_PASSWORD"
 
 # Update secret
 aws secretsmanager update-secret \

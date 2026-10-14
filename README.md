@@ -80,7 +80,7 @@ windows_runner: false
 # Description: 'Postgres database admin user (e.g., 'postgres').'
 pg_dba: '<master user, e.g., postgres>'
 
-# Description: 'Postgres database admin password (e.g., 'tesT$4329uyskdj!kjh').'
+# Description: 'Postgres database admin password'
 pg_dba_password: '<password>'
 
 # Description: 'Postgres database hostname'
