@@ -14,7 +14,6 @@ psql --version    # Should show PostgreSQL client version
 **Not installed?**
 - **macOS:** `brew install inspec postgresql`
 - **Linux:** See [LINUX_SETUP.md](LINUX_SETUP.md)
-- **Windows:** See [TESTING_GUIDE.md](TESTING_GUIDE.md)
 
 ### 2. Create Inputs File
 ```bash

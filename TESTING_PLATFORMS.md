@@ -7,7 +7,7 @@
 | **AWS CloudShell** | 2-3 min | ⭐ Easy | Quick testing, AWS-native | [README_CLOUDSHELL.md](README_CLOUDSHELL.md) |
 | **Linux (EC2/VM)** | 5-10 min | ⭐⭐ Medium | Automated/scheduled scans | [LINUX_CLOUDSHELL_SETUP.md](LINUX_CLOUDSHELL_SETUP.md) |
 | **macOS** | 5 min | ⭐ Easy | Local development | [QUICK_START.md](QUICK_START.md) |
-| **Windows** | 10-15 min | ⭐⭐⭐ Hard | Windows environments | [TESTING_GUIDE.md](TESTING_GUIDE.md) |
+
 
 ---
 
@@ -101,45 +101,6 @@ cp inputs-pg17-test.yml.example inputs-pg17-test.yml
 
 ---
 
-## Windows
-
-### ✅ Advantages
-- Native Windows environment
-- PowerShell support
-
-### ❌ Limitations
-- More complex setup
-- Some controls may skip
-- Requires WSL or native Ruby
-
-### Quick Start
-
-**Option 1: WSL (Recommended)**
-```bash
-# In WSL Ubuntu
-sudo apt-get install -y ruby ruby-dev postgresql-client jq git
-gem install inspec-bin --no-document
-
-# Follow Linux instructions
-```
-
-**Option 2: Native Windows**
-```powershell
-# Install Ruby from rubyinstaller.org
-# Install InSpec
-gem install inspec-bin
-
-# Install PostgreSQL client
-# Download from postgresql.org
-
-# Run tests
-inspec exec . --input-file=inputs-pg17-test.yml --reporter=cli json:results.json
-```
-
-**Documentation:** [TESTING_GUIDE.md](TESTING_GUIDE.md)
-
----
-
 ## Docker Container
 
 ### ✅ Advantages
@@ -179,17 +140,16 @@ docker run -it --rm \
 | Amazon Linux | ✓ | ✓ | ✓ | ✓ | 5 min |
 | macOS | ✓ | ✓ | ✓ | ✓ | 5 min |
 | Ubuntu | ✓ | ✓ | ✓ | ✓ | 5-10 min |
-| Windows | ✗ | ✗ | ✗ | ✗ | 15-20 min |
 
 ### Feature Support
 
-| Feature | CloudShell | Linux | macOS | Windows |
-|---------|-----------|-------|-------|---------|
-| Automated script | ✅ | ✅ | ✅ | ⚠️ |
-| All controls | ✅ | ✅ | ✅ | ⚠️ Some skip |
-| Secrets Manager | ✅ | ✅ | ✅ | ✅ |
-| Long-running tests | ⚠️ Use screen | ✅ | ✅ | ✅ |
-| Scheduled scans | ❌ | ✅ | ✅ | ✅ |
+| Feature | CloudShell | Linux | macOS |
+|---------|-----------|-------|-------|
+| Automated script | ✅ | ✅ | ✅ |
+| All controls | ✅ | ✅ | ✅ |
+| Secrets Manager | ✅ | ✅ | ✅ |
+| Long-running tests | ⚠️ Use screen | ✅ | ✅ |
+| Scheduled scans | ❌ | ✅ | ✅ |
 
 ---
 
@@ -220,11 +180,7 @@ docker run -it --rm \
 - S3 for result storage
 - SNS for notifications
 
-### Windows-Only Environment
-**→ WSL on Windows**
-- Best Windows experience
-- Full Linux compatibility
-- Easy to set up
+
 
 ---
 
@@ -276,7 +232,6 @@ Start Here
 │  AWS CloudShell → README_CLOUDSHELL.md     │
 │  Linux/EC2      → LINUX_CLOUDSHELL_SETUP.md│
 │  macOS          → QUICK_START.md            │
-│  Windows        → TESTING_GUIDE.md          │
 │  Any Platform   → QUICK_START.md            │
 └─────────────────────────────────────────────┘
     ↓
@@ -318,16 +273,6 @@ brew install inspec postgresql jq
 ./test-pg17.sh
 ```
 
-### Windows (WSL)
-```bash
-# Setup
-sudo apt-get install -y ruby ruby-dev postgresql-client jq git
-gem install inspec-bin --no-document
-
-# Run
-./test-pg17.sh
-```
-
 ---
 
 ## Getting Help
@@ -339,7 +284,6 @@ gem install inspec-bin --no-document
 | CloudShell | [README_CLOUDSHELL.md](README_CLOUDSHELL.md) | Troubleshooting section |
 | Linux | [LINUX_CLOUDSHELL_SETUP.md](LINUX_CLOUDSHELL_SETUP.md) | Platform-specific setup |
 | macOS | [QUICK_START.md](QUICK_START.md) | Troubleshooting section |
-| Windows | [TESTING_GUIDE.md](TESTING_GUIDE.md) | Windows runner notes |
 
 ### General Support
 
@@ -351,4 +295,4 @@ gem install inspec-bin --no-document
 
 **Profile Version:** 3.2.0  
 **Last Updated:** 2026-10-13  
-**Supported Platforms:** CloudShell, Amazon Linux, RHEL, Ubuntu, macOS, Windows (WSL)
+**Supported Platforms:** CloudShell, Amazon Linux, RHEL, Ubuntu, macOS
