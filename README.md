@@ -12,12 +12,11 @@ InSpec profile (overlay) to validate the secure configuration of AWS RDS hosted 
 ## Getting Started  
 
 > **🚀 Quick Start Guides:**
-> - **AWS CloudShell:** See [README_CLOUDSHELL.md](README_CLOUDSHELL.md) for one-command setup
-> - **Linux:** See [LINUX_CLOUDSHELL_SETUP.md](LINUX_CLOUDSHELL_SETUP.md) for platform-specific instructions
+> - **Linux:** See [LINUX_SETUP.md](LINUX_SETUP.md) for platform-specific instructions
 > - **All Platforms:** See [QUICK_START.md](QUICK_START.md) for general quick start
 > - **Comprehensive Guide:** See [TESTING_GUIDE.md](TESTING_GUIDE.md) for detailed testing instructions
 
-It is intended and recommended that InSpec and this profile overlay be run from a __"runner"__ host (such as a DevOps orchestration server, an administrative management system, a developer's workstation/laptop, or AWS CloudShell) against the target. This can be any Unix/Linux/MacOS or Windows runner host, with access to the Internet.
+It is intended and recommended that InSpec and this profile overlay be run from a __"runner"__ host (such as a DevOps orchestration server, an administrative management system, or a developer's workstation/laptop) against the target. This can be any Unix/Linux/MacOS or Windows runner host, with access to the Internet.
 
 __For the best security of the runner, always install on the runner the _latest version_ of InSpec__ 
 

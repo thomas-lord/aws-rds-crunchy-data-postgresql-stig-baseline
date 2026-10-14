@@ -1,6 +1,6 @@
 # Quick Start - Testing PostgreSQL 17.8 STIG Profile
 
-> **Running on Linux or AWS CloudShell?** See [LINUX_CLOUDSHELL_SETUP.md](LINUX_CLOUDSHELL_SETUP.md) for platform-specific instructions.
+> **Running on Linux?** See [LINUX_SETUP.md](LINUX_SETUP.md) for platform-specific instructions.
 
 ## 🚀 Fast Track (5 Minutes)
 
@@ -13,7 +13,7 @@ psql --version    # Should show PostgreSQL client version
 
 **Not installed?**
 - **macOS:** `brew install inspec postgresql`
-- **Linux/CloudShell:** See [LINUX_CLOUDSHELL_SETUP.md](LINUX_CLOUDSHELL_SETUP.md)
+- **Linux:** See [LINUX_SETUP.md](LINUX_SETUP.md)
 - **Windows:** See [TESTING_GUIDE.md](TESTING_GUIDE.md)
 
 ### 2. Create Inputs File

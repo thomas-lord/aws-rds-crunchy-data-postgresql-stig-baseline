@@ -1,136 +1,19 @@
-# Linux / AWS CloudShell Setup Guide
+# Linux Setup Guide
 
 ## Overview
 
-This guide provides instructions for running the PostgreSQL 17.8 STIG profile from:
-- AWS CloudShell
+This guide provides instructions for running the PostgreSQL 17.8 STIG profile on Linux systems:
 - Amazon Linux 2 / Amazon Linux 2023
 - RHEL / CentOS
 - Ubuntu / Debian
 
 ---
 
-## Quick Start - AWS CloudShell (Fastest)
-
-AWS CloudShell comes pre-configured with AWS CLI and has network access to your RDS instances.
-
-### 1. Open CloudShell
-
-```bash
-# In AWS Console, click the CloudShell icon (>_) in the top navigation bar
-# Or go to: https://console.aws.amazon.com/cloudshell
-```
-
-### 2. Install Prerequisites
-
-```bash
-# Install Ruby (required for InSpec)
-sudo yum install -y ruby ruby-devel gcc make
-
-# Install InSpec
-gem install inspec-bin --no-document
-
-# Install PostgreSQL client
-sudo yum install -y postgresql15
-
-# Install jq for JSON parsing
-sudo yum install -y jq
-
-# Verify installations
-inspec --version
-psql --version
-jq --version
-```
-
-### 3. Clone or Upload Profile
-
-**Option A: Clone from Git**
-```bash
-cd ~
-git clone https://github.com/mitre/aws-rds-crunchy-data-postgresql-stig-baseline.git
-cd aws-rds-crunchy-data-postgresql-stig-baseline
-```
-
-**Option B: Upload Files**
-```bash
-# In CloudShell, click Actions > Upload file
-# Upload the profile directory as a zip file
-cd ~
-unzip aws-rds-crunchy-data-postgresql-stig-baseline.zip
-cd aws-rds-crunchy-data-postgresql-stig-baseline
-```
-
-### 4. Create Inputs File
-
-```bash
-# Copy example
-cp inputs-pg17-test.yml.example inputs-pg17-test.yml
-
-# Edit with vi or nano
-vi inputs-pg17-test.yml
-# Press 'i' to insert, edit values, press ESC, type ':wq' to save
-```
-
-**Required changes:**
-- `pg_dba_password`: Your RDS master password
-- `pg_host`: Your RDS endpoint (find in RDS console)
-
-**Get RDS endpoint:**
-```bash
-# List your RDS instances
-aws rds describe-db-instances \
-    --query 'DBInstances[*].[DBInstanceIdentifier,Endpoint.Address,EngineVersion]' \
-    --output table
-
-# Get specific endpoint
-aws rds describe-db-instances \
-    --db-instance-identifier your-instance-name \
-    --query 'DBInstances[0].Endpoint.Address' \
-    --output text
-```
-
-### 5. Test Connection
-
-```bash
-# Test database connectivity
-psql -h your-instance.region.rds.amazonaws.com \
-     -U postgres \
-     -d postgres \
-     -c "SELECT version();"
-# Enter password when prompted
-```
-
-### 6. Run Tests
-
-```bash
-# Make script executable
-chmod +x test-pg17.sh
-
-# Run automated test
-./test-pg17.sh
-
-# Or run manually
-inspec exec . \
-    --input-file=inputs-pg17-test.yml \
-    --reporter=cli json:results-pg17.json
-```
-
-### 7. View Results
-
-```bash
-# View summary
-cat results-pg17.json | jq '.profiles[0].summary'
-
-# Download results file
-# In CloudShell: Actions > Download file
-# Enter: results-pg17.json
-```
-
 ---
 
-## Amazon Linux 2 / Amazon Linux 2023
+## Installation by Platform
 
-### Installation
+### Amazon Linux 2 / Amazon Linux 2023
 
 ```bash
 # Update system
@@ -157,22 +40,20 @@ sudo yum install -y jq
 sudo yum install -y git
 ```
 
-### Setup Profile
+### Setup and Run
 
 ```bash
 # Clone profile
-cd /home/ec2-user
-git clone https://github.com/mitre/aws-rds-crunchy-data-postgresql-stig-baseline.git
+cd ~
+git clone https://github.com/YOUR_ORG/aws-rds-crunchy-data-postgresql-stig-baseline.git
 cd aws-rds-crunchy-data-postgresql-stig-baseline
 
 # Create inputs file
 cp inputs-pg17-test.yml.example inputs-pg17-test.yml
 vi inputs-pg17-test.yml
-```
+# Update: pg_dba_password and pg_host
 
-### Run Tests
-
-```bash
+# Run tests
 chmod +x test-pg17.sh
 ./test-pg17.sh
 ```
@@ -215,11 +96,12 @@ sudo yum install -y git
 
 ```bash
 cd ~
-git clone https://github.com/mitre/aws-rds-crunchy-data-postgresql-stig-baseline.git
+git clone https://github.com/YOUR_ORG/aws-rds-crunchy-data-postgresql-stig-baseline.git
 cd aws-rds-crunchy-data-postgresql-stig-baseline
 
 cp inputs-pg17-test.yml.example inputs-pg17-test.yml
 vi inputs-pg17-test.yml
+# Update: pg_dba_password and pg_host
 
 chmod +x test-pg17.sh
 ./test-pg17.sh
@@ -257,11 +139,12 @@ sudo apt-get install -y git
 
 ```bash
 cd ~
-git clone https://github.com/mitre/aws-rds-crunchy-data-postgresql-stig-baseline.git
+git clone https://github.com/YOUR_ORG/aws-rds-crunchy-data-postgresql-stig-baseline.git
 cd aws-rds-crunchy-data-postgresql-stig-baseline
 
 cp inputs-pg17-test.yml.example inputs-pg17-test.yml
 nano inputs-pg17-test.yml  # or vi
+# Update: pg_dba_password and pg_host
 
 chmod +x test-pg17.sh
 ./test-pg17.sh
@@ -353,84 +236,30 @@ psql -h your-instance.region.rds.amazonaws.com \
 
 ---
 
-## Automated Setup Script
+## Running Tests
 
-Create `setup-linux.sh`:
-
-```bash
-#!/bin/bash
-# Automated setup for Linux/CloudShell
-
-set -e
-
-echo "=== PostgreSQL STIG Profile Setup for Linux ==="
-echo ""
-
-# Detect OS
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    OS=$ID
-    VER=$VERSION_ID
-else
-    echo "Cannot detect OS"
-    exit 1
-fi
-
-echo "Detected OS: $OS $VER"
-echo ""
-
-# Install based on OS
-case $OS in
-    amzn)
-        echo "Installing for Amazon Linux..."
-        sudo yum install -y ruby ruby-devel gcc make gcc-c++ \
-            postgresql15 jq git
-        ;;
-    rhel|centos)
-        echo "Installing for RHEL/CentOS..."
-        sudo yum install -y epel-release
-        sudo yum install -y ruby ruby-devel gcc make gcc-c++ \
-            postgresql jq git
-        ;;
-    ubuntu|debian)
-        echo "Installing for Ubuntu/Debian..."
-        sudo apt-get update
-        sudo apt-get install -y ruby ruby-dev build-essential \
-            postgresql-client jq git
-        ;;
-    *)
-        echo "Unsupported OS: $OS"
-        exit 1
-        ;;
-esac
-
-# Install InSpec
-echo ""
-echo "Installing InSpec..."
-sudo gem install inspec-bin --no-document
-
-# Verify installations
-echo ""
-echo "Verifying installations..."
-echo "Ruby: $(ruby --version)"
-echo "InSpec: $(inspec --version | head -1)"
-echo "psql: $(psql --version)"
-echo "jq: $(jq --version)"
-
-echo ""
-echo "=== Setup Complete ==="
-echo ""
-echo "Next steps:"
-echo "1. Clone or upload the profile"
-echo "2. Create inputs-pg17-test.yml from example"
-echo "3. Run: ./test-pg17.sh"
-```
-
-Make it executable and run:
+After installation, set up and run the profile:
 
 ```bash
-chmod +x setup-linux.sh
-./setup-linux.sh
+# Clone profile
+cd ~
+git clone https://github.com/YOUR_ORG/aws-rds-crunchy-data-postgresql-stig-baseline.git
+cd aws-rds-crunchy-data-postgresql-stig-baseline
+
+# Create inputs file
+cp inputs-pg17-test.yml.example inputs-pg17-test.yml
+vi inputs-pg17-test.yml
+# Update: pg_dba_password and pg_host
+
+# Test database connection
+psql -h your-rds-endpoint -U postgres -d postgres -c "SELECT version();"
+
+# Run tests
+chmod +x test-pg17.sh
+./test-pg17.sh
+
+# View results
+cat test-results/results-pg17-*.json | jq '.profiles[0].summary'
 ```
 
 ---
@@ -475,7 +304,7 @@ docker run -it --rm \
 
 ---
 
-## Troubleshooting Linux/CloudShell
+## Troubleshooting
 
 ### Issue: gem install fails
 
@@ -542,39 +371,7 @@ rm -rf ~/.inspec/cache
 
 ---
 
-## CloudShell Limitations
-
-### Storage
-- CloudShell has 1GB persistent storage in $HOME
-- Files outside $HOME are deleted after session ends
-- Store profile and results in $HOME
-
-### Session Timeout
-- Sessions timeout after 20 minutes of inactivity
-- Use `screen` or `tmux` for long-running tests
-
-```bash
-# Install screen
-sudo yum install -y screen
-
-# Start screen session
-screen -S stig-test
-
-# Run tests
-./test-pg17.sh
-
-# Detach: Ctrl+A, then D
-# Reattach: screen -r stig-test
-```
-
-### Network
-- CloudShell runs in AWS network
-- Has access to private RDS instances in same region
-- No additional VPN/bastion needed
-
----
-
-## Best Practices for Linux/CloudShell
+## Best Practices
 
 ### 1. Use IAM Authentication (Optional)
 
@@ -620,82 +417,7 @@ aws s3api put-bucket-lifecycle-configuration \
     --lifecycle-configuration file://lifecycle.json
 ```
 
----
 
-## Example: Complete CloudShell Workflow
-
-```bash
-# 1. Open CloudShell in AWS Console
-
-# 2. Install prerequisites
-sudo yum install -y ruby ruby-devel gcc make postgresql15 jq
-gem install inspec-bin --no-document
-
-# 3. Clone profile
-cd ~
-git clone https://github.com/mitre/aws-rds-crunchy-data-postgresql-stig-baseline.git
-cd aws-rds-crunchy-data-postgresql-stig-baseline
-
-# 4. Get RDS endpoint
-RDS_ENDPOINT=$(aws rds describe-db-instances \
-    --db-instance-identifier your-pg17-instance \
-    --query 'DBInstances[0].Endpoint.Address' \
-    --output text)
-
-echo "RDS Endpoint: $RDS_ENDPOINT"
-
-# 5. Get password from Secrets Manager
-RDS_PASSWORD=$(aws secretsmanager get-secret-value \
-    --secret-id rds/postgres/password \
-    --query SecretString \
-    --output text)
-
-# 6. Create inputs file
-cat > inputs-pg17-test.yml <<EOF
-pg_dba: 'postgres'
-pg_dba_password: '$RDS_PASSWORD'
-pg_host: '$RDS_ENDPOINT'
-pg_db: 'postgres'
-pg_port: 5432
-pg_version: '17.8'
-windows_runner: false
-pg_users: ["postgres", "rds_iam", "rds_superuser", "rdsadmin"]
-pg_superusers: ["rdsadmin"]
-rds_superusers: ["postgres"]
-pg_system_resource_users: ["postgres", "rds_superuser"]
-pg_owner: "postgres"
-pg_group: "postgres"
-approved_ext: ["pgaudit"]
-approved_packages: []
-pg_max_connections: 100
-pg_timezone: 'UTC'
-pg_ssl: 'on'
-pgaudit_log_items: ['ddl', 'role', 'read', 'write']
-pgaudit_log_line_items: ['%m', '%u', '%c', '%d', '%p', '%r']
-pg_replicas: []
-pg_object_granted_privileges: 'arwdDxt'
-pg_object_public_privileges: 'r'
-pg_object_exceptions: []
-EOF
-
-# 7. Test connection
-psql -h $RDS_ENDPOINT -U postgres -d postgres -c "SELECT version();"
-
-# 8. Run tests
-chmod +x test-pg17.sh
-./test-pg17.sh
-
-# 9. View results
-cat test-results/results-pg17-*.json | jq '.profiles[0].summary'
-
-# 10. Upload to S3
-aws s3 cp test-results/results-pg17-*.json \
-    s3://your-bucket/stig-results/$(date +%Y%m%d)/
-
-# 11. Download for Heimdall (optional)
-# CloudShell: Actions > Download file
-# Enter: test-results/results-pg17-<timestamp>.json
-```
 
 ---
 
@@ -736,6 +458,6 @@ cat results-pg17.json | jq '.profiles[0].summary'
 
 ---
 
-**Last Updated:** 2026-10-13  
+**Last Updated:** 2026-10-14  
 **Profile Version:** 3.2.0  
-**Tested On:** Amazon Linux 2023, RHEL 8/9, Ubuntu 22.04, AWS CloudShell
+**Tested On:** Amazon Linux 2023, RHEL 8/9, Ubuntu 22.04
