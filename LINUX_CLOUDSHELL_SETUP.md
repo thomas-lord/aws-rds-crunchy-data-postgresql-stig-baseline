@@ -579,15 +579,15 @@ screen -S stig-test
 ### 1. Use IAM Authentication (Optional)
 
 ```bash
-# Generate auth token
-export PGPASSWORD=$(aws rds generate-db-auth-token \
+# Generate auth token (IAM authentication)
+TOKEN=$(aws rds generate-db-auth-token \
     --hostname your-instance.region.rds.amazonaws.com \
     --port 5432 \
     --username postgres \
     --region us-east-1)
 
 # Connect with token
-psql -h your-instance.region.rds.amazonaws.com \
+PGPASSWORD=$TOKEN psql -h your-instance.region.rds.amazonaws.com \
      -U postgres \
      -d postgres
 ```
