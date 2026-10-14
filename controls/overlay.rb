@@ -156,7 +156,7 @@ include_controls 'crunchy-data-postgresql-stig-baseline' do
       # pg_settings_acl = "^((((#{supperusers})=[#{object_granted_privileges}]+|"\
       #   "=rw)\/\\w+,?)+)\\|pg_catalog\\|pg_settings\\|v"
       pg_settings_acl = "^((((#{supperusers})=[#{object_granted_privileges}]+|"\
-        "=(#{object_public_privileges}|rw))\/\\w+,?)+)|pg_catelog\|\w+\|(r|v)"
+        "=(#{object_public_privileges}|rw))\/\\w+,?)+)|pg_catalog\|\w+\|(r|v)"
         
       pg_settings_acl_regex = Regexp.new(pg_settings_acl)
 
@@ -200,7 +200,7 @@ include_controls 'crunchy-data-postgresql-stig-baseline' do
       end
     else
       describe 'This must be manually reviewed at this time' do
-        skip 'This must be manually reveiwed at this time'
+        skip 'This must be manually reviewed at this time'
       end
     end
   end
@@ -1031,6 +1031,9 @@ include_controls 'crunchy-data-postgresql-stig-baseline' do
   end
 
   control 'V-233596' do
+    desc 'note', 'PostgreSQL 10-13 use "on/md5", PostgreSQL 14+ default to "scram-sha-256". '\
+      'PostgreSQL 17+ only support scram-sha-256.'
+    
     sql = postgres_session(input('pg_dba'), input('pg_dba_password'), input('pg_host'), input('pg_port'))
 
     describe sql.query('SHOW password_encryption;', [input('pg_db')]) do
@@ -1118,7 +1121,7 @@ include_controls 'crunchy-data-postgresql-stig-baseline' do
           'n.nspname FROM pg_catalog.pg_namespace n '\
           "WHERE n.nspname = '#{schema}';"
         # If the db name is not specified it defaults to the user name executing the query
-        describe sql.query(nspacl_sql [database]) do
+        describe sql.query(nspacl_sql, [database]) do
           its('output') { should match schema_acl_regex }
         end
       end
