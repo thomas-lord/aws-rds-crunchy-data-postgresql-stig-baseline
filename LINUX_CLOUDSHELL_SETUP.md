@@ -586,10 +586,8 @@ TOKEN=$(aws rds generate-db-auth-token \
     --username postgres \
     --region us-east-1)
 
-# Connect with token
-PGPASSWORD=$TOKEN psql -h your-instance.region.rds.amazonaws.com \
-     -U postgres \
-     -d postgres
+# Connect with token (set password inline)
+psql "postgresql://postgres:$TOKEN@your-instance.region.rds.amazonaws.com:5432/postgres"
 ```
 
 ### 2. Automate with Systems Manager
