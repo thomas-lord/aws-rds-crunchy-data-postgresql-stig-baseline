@@ -130,9 +130,6 @@ pg_port: 5432
 # Version Information
 pg_version: '17.8'
 
-# Windows or Linux Runner (default: false for Linux/macOS)
-windows_runner: false
-
 # User Accounts
 pg_users:
   - "postgres"

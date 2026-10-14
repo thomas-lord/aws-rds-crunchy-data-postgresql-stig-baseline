@@ -16,7 +16,7 @@ InSpec profile (overlay) to validate the secure configuration of AWS RDS hosted 
 > - **All Platforms:** See [QUICK_START.md](QUICK_START.md) for general quick start
 > - **Comprehensive Guide:** See [TESTING_GUIDE.md](TESTING_GUIDE.md) for detailed testing instructions
 
-It is intended and recommended that InSpec and this profile overlay be run from a __"runner"__ host (such as a DevOps orchestration server, an administrative management system, or a developer's workstation/laptop) against the target. This can be any Unix/Linux/MacOS or Windows runner host, with access to the Internet.
+It is intended and recommended that InSpec and this profile overlay be run from a __"runner"__ host (such as a DevOps orchestration server, an administrative management system, or a developer's workstation/laptop) against the target. This can be any Unix/Linux/MacOS runner host, with access to the Internet.
 
 __For the best security of the runner, always install on the runner the _latest version_ of InSpec__ 
 
@@ -64,17 +64,10 @@ For installation of psql client on other operating systems for your runner host,
   
 ## Inputs: Tailoring your scan to Your Environment
 The following inputs must be configured in an inputs ".yml" file for the profile to run correctly for your specific environment. More information about InSpec inputs can be found in the [InSpec Profile Documentation](https://www.inspec.io/docs/reference/profiles/).
-#### *Note* Windows and Linux InSpec Runner
-
-There are current issues with how the profiles run when using a windows or linux runner. We have accounted for this in the profile with the `windows_runner` input - which we *default* to `false` assuming a Linux based InSpec runner.
-
-If you are using a *Windows* based inspec installation, please set the `windows_runner` input to `true` either via your `inspec.yml` file or via the cli flag via, `--input windows_runner=true`
 
 ### Example Inputs You Can Use
 
 ```yaml
-# Windows or Linux Runner (default value = false)
-windows_runner: false
 
 # Description: 'Postgres database admin user (e.g., 'postgres').'
 pg_dba: '<master user, e.g., postgres>'
