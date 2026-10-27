@@ -68,26 +68,12 @@ control 'V-261875' do
   tag stig_id: 'CD16-00-002000'
   tag cci: ["CCI-000162"]
   tag nist: ["AU-9 a"]
-  conn = aws_rds_connection(
-    aws_instance_id: input('aws_db_instance_identifier'),
-    region: input('aws_region'),
-    profile: input('aws_cli_profile'),
-    host: input('pg_host'),
-    port: input('pg_port'),
-    db: input('pg_db'),
-    dba: input('pg_dba')
-  )
+  conn = rds_connection
   sql = conn.sql_session(input('pg_dba_password'))
 
   describe sql.query('SHOW log_file_mode;', [conn.db]) do
     its('output.strip') { should cmp input('pg_log_file_mode') }
   end
 
-
-  if conn.aws_available?
-    describe 'RDS DB parameter group apply status (flags parameter-group changes not yet applied to the running instance)' do
-      subject { conn.parameter_apply_status }
-      it { should_not cmp 'pending-reboot' }
-    end
-  end
+  rds_check_parameter_apply_status(conn)
 end

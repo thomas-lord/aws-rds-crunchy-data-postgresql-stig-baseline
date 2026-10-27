@@ -34,58 +34,16 @@ control 'V-261926' do
   tag stig_id: 'CD16-00-008000'
   tag cci: ["CCI-001762"]
   tag nist: ["CM-7 (1) (b)"]
-  aws_ready = command('aws').exist?
-  only_if('The AWS CLI must be installed and configured with credentials, and the aws_db_instance_identifier input must be set, to evaluate this control.') do
-    aws_ready && !input('aws_db_instance_identifier').empty?
-  end
-
-  region_flag = input('aws_region').empty? ? '' : "--region #{input('aws_region')}"
-  profile_flag = input('aws_cli_profile').empty? ? '' : "--profile #{input('aws_cli_profile')}"
-
-  require 'json'
-
-  sg_ids_cmd = "aws rds describe-db-instances --db-instance-identifier #{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'DBInstances[0].VpcSecurityGroups[].VpcSecurityGroupId' --output text"
-  sg_ids_result = command(sg_ids_cmd)
-  sg_ids = sg_ids_result.exit_status.zero? ? sg_ids_result.stdout.split : []
+  conn = rds_connection
+  rds_only_if_aws(conn)
 
   # An RDS instance in a VPC always has at least one security group; an empty list
-  # means the lookup failed, which must fail the control rather than yield no tests.
-  describe 'RDS instance VPC security group lookup' do
-    it "should return at least one security group (aws exit #{sg_ids_result.exit_status}: #{sg_ids_result.stderr.strip})" do
-      expect(sg_ids).not_to be_empty
-    end
+  # means the lookup found nothing to check, which must not read as a pass.
+  groups = conn.security_group_ingress
+  describe 'RDS instance VPC security groups' do
+    subject { groups }
+    it { should_not be_empty }
   end
 
-  approved_cidrs = input('pg_approved_ingress_cidrs')
-
-  sg_ids.each do |sg_id|
-    perms_cmd = "aws ec2 describe-security-groups --group-ids #{sg_id} #{region_flag} #{profile_flag} --query 'SecurityGroups[0].IpPermissions' --output json"
-    result = command(perms_cmd)
-    ingress_cidrs = []
-    lookup_error = nil
-    if result.exit_status.zero?
-      begin
-        JSON.parse(result.stdout).each do |perm|
-          (perm['IpRanges'] || []).each { |r| ingress_cidrs << r['CidrIp'] }
-        end
-      rescue JSON::ParserError => e
-        lookup_error = "unparseable output: #{e.message}"
-      end
-    else
-      lookup_error = "aws exit #{result.exit_status}: #{result.stderr.strip}"
-    end
-
-    describe "Security group #{sg_id} ingress CIDRs (#{ingress_cidrs.join(', ')})" do
-      # Without this, a failed lookup leaves ingress_cidrs empty and both checks below pass.
-      it "should be readable via ec2:DescribeSecurityGroups#{lookup_error ? " (#{lookup_error})" : ''}" do
-        expect(lookup_error).to be_nil
-      end
-      it "should not include the public 0.0.0.0/0 range" do
-        expect(ingress_cidrs).not_to include('0.0.0.0/0')
-      end
-      it 'should only include CIDRs approved via the pg_approved_ingress_cidrs input (PPSM CAL / vulnerability assessment)' do
-        expect(ingress_cidrs - approved_cidrs).to be_empty
-      end
-    end
-  end
+  rds_check_security_group_ingress(groups)
 end

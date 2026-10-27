@@ -35,15 +35,7 @@ control 'V-261924' do
   tag stig_id: 'CD16-00-007800'
   tag cci: ["CCI-001813"]
   tag nist: ["CM-5 (1) (a)"]
-  conn = aws_rds_connection(
-    aws_instance_id: input('aws_db_instance_identifier'),
-    region: input('aws_region'),
-    profile: input('aws_cli_profile'),
-    host: input('pg_host'),
-    port: input('pg_port'),
-    db: input('pg_db'),
-    dba: input('pg_dba')
-  )
+  conn = rds_connection
   sql = conn.sql_session(input('pg_dba_password'))
 
   unauthorized_superusers_sql = "SELECT rolname FROM pg_roles WHERE rolsuper = true;"

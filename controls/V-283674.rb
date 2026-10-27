@@ -33,15 +33,7 @@ control 'V-283674' do
   tag stig_id: 'CD16-00-009300'
   tag cci: ["CCI-003376"]
   tag nist: ["SA-22 a"]
-  conn = aws_rds_connection(
-    aws_instance_id: input('aws_db_instance_identifier'),
-    region: input('aws_region'),
-    profile: input('aws_cli_profile'),
-    host: input('pg_host'),
-    port: input('pg_port'),
-    db: input('pg_db'),
-    dba: input('pg_dba')
-  )
+  conn = rds_connection
   sql = conn.sql_session(input('pg_dba_password'))
 
   describe sql.query('SHOW server_version;', [conn.db]) do

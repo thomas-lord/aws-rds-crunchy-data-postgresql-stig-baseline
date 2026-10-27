@@ -34,15 +34,7 @@ control 'V-261901' do
   tag cci: ["CCI-001199"]
   tag nist: ["SC-28"]
   if input('pg_encryption_of_data_at_rest_required')
-    conn = aws_rds_connection(
-      aws_instance_id: input('aws_db_instance_identifier'),
-      region: input('aws_region'),
-      profile: input('aws_cli_profile'),
-      host: input('pg_host'),
-      port: input('pg_port'),
-      db: input('pg_db'),
-      dba: input('pg_dba')
-    )
+    conn = rds_connection
     sql = conn.sql_session(input('pg_dba_password'))
 
     # Disk-level encryption: on RDS this is storage encryption with an AWS KMS key,

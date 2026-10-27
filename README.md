@@ -71,7 +71,9 @@ passing — you asked for the AWS checks, so an inability to perform them is sur
 
 ### Connection auto-discovery
 
-All SQL-based controls connect via a shared `aws_rds_connection` resource (see `libraries/aws_rds_connection.rb`)
+All SQL- and AWS CLI-based controls connect via a shared `aws_rds_connection` resource (see
+`libraries/aws_rds_connection.rb`, built from the standard inputs by the `rds_connection` helper in
+`libraries/rds_stig_helpers.rb`, alongside the other shared check helpers)
 that resolves `pg_host`, `pg_port`, `pg_db`, and `pg_dba` from `aws rds describe-db-instances`
 (`Endpoint.Address`, `Endpoint.Port`, `DBName`, `MasterUsername`) whenever `aws_db_instance_identifier` is set and
 the AWS CLI is available — the manual `pg_host`/`pg_port`/`pg_db`/`pg_dba` inputs are then only used when

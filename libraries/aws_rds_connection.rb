@@ -1,4 +1,5 @@
 require 'json'
+require 'shellwords'
 
 # Custom InSpec resource: resolves PostgreSQL connection parameters for an AWS RDS
 # instance via the AWS CLI (`aws rds describe-db-instances`) when an instance
@@ -37,6 +38,10 @@ module Inspec::Resources
     # AWS describe call and the SQL connectivity probe each run once per scan, and a
     # bad password is only tried once rather than once per control. Failures are
     # cached too, so every control reports the same original error.
+    #
+    # Always reach these through AwsRdsConnection, never self.class: InSpec
+    # instantiates resources via an anonymous subclass, which doesn't see the
+    # parent's class-level instance variables.
     @instance_cache = {}
     @session_cache = {}
     class << self
@@ -96,7 +101,7 @@ module Inspec::Resources
     def sql_session(password)
       session = inspec.postgres_session(dba, password, host, port)
       key = [dba, host, port, db]
-      cache = self.class.session_cache
+      cache = AwsRdsConnection.session_cache
       unless cache.key?(key)
         output = begin
           session.query('SELECT 1;', [db]).output.to_s.strip
@@ -114,6 +119,38 @@ module Inspec::Resources
       session
     end
 
+    # --- AWS-side lookups for the AWS CLI-based controls ---------------------------
+    # Each raises AwsRdsConnectionError (failing the calling control with the AWS
+    # error) when the CLI call fails, so a lookup failure can never read as "no
+    # findings". Each returns [] when AWS discovery isn't in use: a control skipped
+    # by only_if still evaluates its body, which must not shell out to a missing CLI.
+
+    # [{ id:, cidrs: [...] }] for each VPC security group attached to the instance.
+    # Only IPv4 ranges (IpRanges) are collected, matching the original checks.
+    def security_group_ingress
+      ids = (aws_attr('VpcSecurityGroups') || []).map { |g| g['VpcSecurityGroupId'] }.compact
+      ids.map do |id|
+        perms = aws_json(%W(ec2 describe-security-groups --group-ids #{id} --query SecurityGroups[0].IpPermissions))
+        cidrs = (perms || []).flat_map { |p| (p['IpRanges'] || []).map { |r| r['CidrIp'] } }
+        { id: id, cidrs: cidrs }
+      end
+    end
+
+    # CloudWatch alarms on this instance's FreeStorageSpace metric.
+    def free_storage_alarms
+      return [] unless aws_available?
+      aws_json(%W(cloudwatch describe-alarms-for-metric --namespace AWS/RDS --metric-name FreeStorageSpace
+                  --dimensions Name=DBInstanceIdentifier,Value=#{@aws_instance_id} --query MetricAlarms)) || []
+    end
+
+    # Pending maintenance actions for this instance (filtered server-side; the
+    # response's ResourceIdentifier is the ARN, not the bare identifier).
+    def pending_maintenance_actions
+      return [] unless aws_available?
+      aws_json(%W(rds describe-pending-maintenance-actions --filters Name=db-instance-id,Values=#{@aws_instance_id}
+                  --query PendingMaintenanceActions)) || []
+    end
+
     def to_s
       "aws_rds_connection(#{@aws_instance_id.empty? ? 'manual' : @aws_instance_id})"
     end
@@ -128,27 +165,35 @@ module Inspec::Resources
 
     def describe_instance
       key = [@aws_instance_id, @region, @profile]
-      cache = self.class.instance_cache
+      cache = AwsRdsConnection.instance_cache
       cache[key] ||= fetch_instance
       raise AwsRdsConnectionError, cache[key][:error] if cache[key][:error]
       cache[key][:data]
     end
 
     def fetch_instance
-      region_flag = @region.empty? ? '' : "--region #{@region}"
-      profile_flag = @profile.empty? ? '' : "--profile #{@profile}"
-      cmd = "aws rds describe-db-instances --db-instance-identifier #{@aws_instance_id} " \
-            "#{region_flag} #{profile_flag} --query 'DBInstances[0]' --output json"
-      result = inspec.command(cmd)
-      unless result.exit_status.zero?
-        return { error: "Preflight failed: `aws rds describe-db-instances` for #{@aws_instance_id} " \
-                        "exited #{result.exit_status}: #{result.stderr.strip}" }
-      end
-      data = JSON.parse(result.stdout)
+      data = aws_json(%W(rds describe-db-instances --db-instance-identifier #{@aws_instance_id} --query DBInstances[0]))
       return { error: "Preflight failed: no RDS instance data returned for #{@aws_instance_id}" } unless data.is_a?(Hash)
       { data: data }
+    rescue AwsRdsConnectionError => e
+      { error: "Preflight failed: #{e.message}" }
+    end
+
+    # Runs `aws <args...> --output json` with the configured region/profile, every
+    # argument shell-escaped. Returns parsed JSON; raises on a non-zero exit or
+    # unparseable output.
+    def aws_json(args)
+      args += ['--region', @region] unless @region.empty?
+      args += ['--profile', @profile] unless @profile.empty?
+      args += ['--output', 'json']
+      cmd = (['aws'] + args).map { |a| Shellwords.escape(a) }.join(' ')
+      result = inspec.command(cmd)
+      unless result.exit_status.zero?
+        raise AwsRdsConnectionError, "`aws #{args[0, 2].join(' ')}` exited #{result.exit_status}: #{result.stderr.strip}"
+      end
+      JSON.parse(result.stdout)
     rescue JSON::ParserError => e
-      { error: "Preflight failed: could not parse `aws rds describe-db-instances` output for #{@aws_instance_id}: #{e.message}" }
+      raise AwsRdsConnectionError, "could not parse `aws #{args[0, 2].join(' ')}` output: #{e.message}"
     end
   end
 end

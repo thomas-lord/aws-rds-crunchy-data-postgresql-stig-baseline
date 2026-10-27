@@ -45,16 +45,11 @@ control 'V-261917' do
   tag cci: ["CCI-001844"]
   # CCI-001844 has no NIST SP 800-53 Rev 5 mapping in the DISA CCI list (2025-01-23); Rev 4 reference used.
   tag nist: ["AU-3 (2)"]
-  aws_ready = command('aws').exist?
-  only_if('The AWS CLI must be installed and configured with credentials, and the aws_db_instance_identifier input must be set, to evaluate this control.') do
-    aws_ready && !input('aws_db_instance_identifier').empty?
-  end
+  conn = rds_connection
+  rds_only_if_aws(conn)
 
-  region_flag = input('aws_region').empty? ? '' : "--region #{input('aws_region')}"
-  profile_flag = input('aws_cli_profile').empty? ? '' : "--profile #{input('aws_cli_profile')}"
-
-  describe command("aws rds describe-db-instances --db-instance-identifier #{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'DBInstances[0].EnabledCloudwatchLogsExports' --output text") do
-    its('stdout') { should match(/postgresql/) }
-    its('exit_status') { should eq 0 }
+  describe 'RDS CloudWatch Logs exports (EnabledCloudwatchLogsExports)' do
+    subject { conn.aws_instance_attr('EnabledCloudwatchLogsExports') || [] }
+    it { should include 'postgresql' }
   end
 end
