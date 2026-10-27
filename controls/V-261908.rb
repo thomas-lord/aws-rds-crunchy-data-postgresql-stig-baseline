@@ -41,7 +41,7 @@ control 'V-261908' do
     db: input('pg_db'),
     dba: input('pg_dba')
   )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  sql = conn.sql_session(input('pg_dba_password'))
 
   describe sql.query('SHOW client_min_messages;', [conn.db]) do
     its('output.strip') { should cmp input('pg_client_min_messages') }

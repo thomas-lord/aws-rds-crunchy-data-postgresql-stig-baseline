@@ -49,10 +49,10 @@ control 'V-261930' do
       db: input('pg_db'),
       dba: input('pg_dba')
     )
-    sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+    sql = conn.sql_session(input('pg_dba_password'))
 
     describe sql.query("SELECT installed_version FROM pg_available_extensions WHERE name='pgcrypto';", [conn.db]) do
-      its('output.strip') { should_not be_empty }
+      its('output.strip') { should match(/\A\d+(\.\d+)*\z/) }
     end
   else
     describe 'The organization has indicated (via the pg_encryption_of_data_at_rest_required input) that encryption of this data at rest is not required by the application owner/Authorizing Official; this control is Not a Finding.' do

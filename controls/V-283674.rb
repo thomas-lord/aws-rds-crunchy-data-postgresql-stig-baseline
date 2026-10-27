@@ -42,10 +42,10 @@ control 'V-283674' do
     db: input('pg_db'),
     dba: input('pg_dba')
   )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  sql = conn.sql_session(input('pg_dba_password'))
 
   describe sql.query('SHOW server_version;', [conn.db]) do
-    its('output') { should_not be_empty }
+    its('output.strip') { should match(/\A\d+(\.\d+)*/) }
   end
 
   describe 'Manually verify against the current PostgreSQL / Crunchy Data support lifecycle that the running major version (reported above) is still vendor-supported.' do

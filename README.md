@@ -63,19 +63,31 @@ Controls tagged "AWS CLI" above require:
 - The `aws_db_instance_identifier` input set to the RDS **DB instance identifier** (not the connection endpoint).
 - Optionally `aws_region` / `aws_cli_profile` if not relying on the runner's default AWS configuration.
 
-If the AWS CLI isn't installed/configured or `aws_db_instance_identifier` is left blank, these controls are
-skipped (`only_if`) rather than reported as failing, so the profile still runs cleanly SQL-only when AWS access
-isn't available.
+If the AWS CLI isn't installed or `aws_db_instance_identifier` is left blank, these controls are skipped
+(`only_if`) rather than reported as failing, so the profile still runs cleanly SQL-only when AWS access isn't
+available. If the CLI *is* installed and the identifier *is* set, but an AWS call fails (expired credentials,
+missing IAM permission, wrong region), the affected controls **fail** with the AWS error rather than skipping or
+passing — you asked for the AWS checks, so an inability to perform them is surfaced, not hidden.
 
 ### Connection auto-discovery
 
 All SQL-based controls connect via a shared `aws_rds_connection` resource (see `libraries/aws_rds_connection.rb`)
 that resolves `pg_host`, `pg_port`, `pg_db`, and `pg_dba` from `aws rds describe-db-instances`
 (`Endpoint.Address`, `Endpoint.Port`, `DBName`, `MasterUsername`) whenever `aws_db_instance_identifier` is set and
-the AWS CLI is available — the manual `pg_host`/`pg_port`/`pg_db`/`pg_dba` inputs are then only used as a fallback
-(e.g., when connecting through a bastion/different hostname than the RDS endpoint, or without AWS CLI access).
-**`pg_dba_password` is never discoverable this way and must always be supplied manually** — it's a secret the AWS
-API has no way to return.
+the AWS CLI is available — the manual `pg_host`/`pg_port`/`pg_db`/`pg_dba` inputs are then only used when
+discovery isn't in use (identifier blank or no AWS CLI on the runner), or for an individual field AWS leaves
+unset (e.g., `DBName`). **`pg_dba_password` is never discoverable this way and must always be supplied
+manually** — it's a secret the AWS API has no way to return.
+
+### Preflight gate
+
+Before any SQL control queries the database, the same resource runs a one-time `SELECT 1` probe. If it doesn't
+succeed — unreachable host, bad password, missing `psql`, or a failed AWS discovery call — **every SQL-based
+control fails** with a `Preflight failed: ...` message carrying the underlying `psql`/`aws` error. Discovery
+does **not** quietly fall back to the manual inputs when an AWS call fails. This ensures a broken connection can
+never surface as passing results (e.g., an empty query result vacuously satisfying a check). The probe and the
+`describe-db-instances` lookup each run once per scan and their results (including failures) are shared by all
+controls, so a bad password is tried once rather than once per control.
 
 Every SQL-based control that connects this way also adds a secondary check of the DB instance's parameter group
 `ParameterApplyStatus`: if it's `pending-reboot`, the control still reports the true *live* SQL `SHOW` result as

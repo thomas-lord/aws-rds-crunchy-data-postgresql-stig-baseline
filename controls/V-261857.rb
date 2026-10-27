@@ -65,10 +65,14 @@ control 'V-261857' do
     db: input('pg_db'),
     dba: input('pg_dba')
   )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  sql = conn.sql_session(input('pg_dba_password'))
 
-  describe sql.query('SHOW max_connections;', [conn.db]).output.strip.to_i do
-    it { should be <= input('pg_max_connections').to_i }
+  # Assert the value is numeric before comparing: non-numeric output (e.g. an
+  # error message) would otherwise coerce to 0 via to_i and pass the <= check.
+  describe 'SHOW max_connections' do
+    subject { sql.query('SHOW max_connections;', [conn.db]).output.strip }
+    it { should match(/\A\d+\z/) }
+    it { should cmp <= input('pg_max_connections').to_i }
   end
 
 

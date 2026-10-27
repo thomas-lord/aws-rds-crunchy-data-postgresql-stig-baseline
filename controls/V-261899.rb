@@ -47,22 +47,22 @@ control 'V-261899' do
     db: input('pg_db'),
     dba: input('pg_dba')
   )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  sql = conn.sql_session(input('pg_dba_password'))
 
   describe sql.query('SHOW tcp_keepalives_idle;', [conn.db]) do
-    its('output.strip') { should_not cmp '0' }
+    its('output.strip') { should match(/\A[1-9]\d*(us|ms|s|min|h|d)?\z/) }
   end
 
   describe sql.query('SHOW tcp_keepalives_interval;', [conn.db]) do
-    its('output.strip') { should_not cmp '0' }
+    its('output.strip') { should match(/\A[1-9]\d*(us|ms|s|min|h|d)?\z/) }
   end
 
   describe sql.query('SHOW tcp_keepalives_count;', [conn.db]) do
-    its('output.strip') { should_not cmp '0' }
+    its('output.strip') { should match(/\A[1-9]\d*(us|ms|s|min|h|d)?\z/) }
   end
 
   describe sql.query('SHOW statement_timeout;', [conn.db]) do
-    its('output.strip') { should_not cmp '0' }
+    its('output.strip') { should match(/\A[1-9]\d*(us|ms|s|min|h|d)?\z/) }
   end
 
 

@@ -51,7 +51,16 @@ control 'V-261889' do
   require 'json'
 
   sg_ids_cmd = "aws rds describe-db-instances --db-instance-identifier #{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'DBInstances[0].VpcSecurityGroups[].VpcSecurityGroupId' --output text"
-  sg_ids = command(sg_ids_cmd).stdout.split
+  sg_ids_result = command(sg_ids_cmd)
+  sg_ids = sg_ids_result.exit_status.zero? ? sg_ids_result.stdout.split : []
+
+  # An RDS instance in a VPC always has at least one security group; an empty list
+  # means the lookup failed, which must fail the control rather than yield no tests.
+  describe 'RDS instance VPC security group lookup' do
+    it "should return at least one security group (aws exit #{sg_ids_result.exit_status}: #{sg_ids_result.stderr.strip})" do
+      expect(sg_ids).not_to be_empty
+    end
+  end
 
   approved_cidrs = input('pg_approved_ingress_cidrs')
 
@@ -59,17 +68,24 @@ control 'V-261889' do
     perms_cmd = "aws ec2 describe-security-groups --group-ids #{sg_id} #{region_flag} #{profile_flag} --query 'SecurityGroups[0].IpPermissions' --output json"
     result = command(perms_cmd)
     ingress_cidrs = []
+    lookup_error = nil
     if result.exit_status.zero?
       begin
         JSON.parse(result.stdout).each do |perm|
           (perm['IpRanges'] || []).each { |r| ingress_cidrs << r['CidrIp'] }
         end
-      rescue JSON::ParserError
-        ingress_cidrs = []
+      rescue JSON::ParserError => e
+        lookup_error = "unparseable output: #{e.message}"
       end
+    else
+      lookup_error = "aws exit #{result.exit_status}: #{result.stderr.strip}"
     end
 
     describe "Security group #{sg_id} ingress CIDRs (#{ingress_cidrs.join(', ')})" do
+      # Without this, a failed lookup leaves ingress_cidrs empty and both checks below pass.
+      it "should be readable via ec2:DescribeSecurityGroups#{lookup_error ? " (#{lookup_error})" : ''}" do
+        expect(lookup_error).to be_nil
+      end
       it "should not include the public 0.0.0.0/0 range" do
         expect(ingress_cidrs).not_to include('0.0.0.0/0')
       end

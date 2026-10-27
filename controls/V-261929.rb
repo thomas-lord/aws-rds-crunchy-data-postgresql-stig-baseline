@@ -35,14 +35,14 @@ control 'V-261929' do
     db: input('pg_db'),
     dba: input('pg_dba')
   )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  sql = conn.sql_session(input('pg_dba_password'))
 
   describe sql.query('SHOW ssl_ca_file;', [conn.db]) do
-    its('output.strip') { should_not be_empty }
+    its('output.strip') { should match(/\A\S+\z/) }
   end
 
   describe sql.query('SHOW ssl_cert_file;', [conn.db]) do
-    its('output.strip') { should_not be_empty }
+    its('output.strip') { should match(/\A\S+\z/) }
   end
 
 

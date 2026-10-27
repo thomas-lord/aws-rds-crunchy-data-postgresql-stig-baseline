@@ -44,10 +44,13 @@ control 'V-261924' do
     db: input('pg_db'),
     dba: input('pg_dba')
   )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  sql = conn.sql_session(input('pg_dba_password'))
 
   unauthorized_superusers_sql = "SELECT rolname FROM pg_roles WHERE rolsuper = true;"
+  # RDS always has at least one superuser (rdsadmin), so an empty result means the
+  # query didn't actually run -- don't let `all` pass vacuously over an empty list.
   describe sql.query(unauthorized_superusers_sql, [conn.db]).lines do
+    it { should_not be_empty }
     it { should all(be_in input('pg_superusers')) }
   end
 

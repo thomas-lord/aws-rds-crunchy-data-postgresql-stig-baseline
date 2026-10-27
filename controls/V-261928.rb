@@ -51,7 +51,7 @@ control 'V-261928' do
     db: input('pg_db'),
     dba: input('pg_dba')
   )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  sql = conn.sql_session(input('pg_dba_password'))
 
   describe sql.query('SHOW ssl;', [conn.db]) do
     its('output.strip') { should cmp input('pg_ssl') }

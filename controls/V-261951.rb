@@ -44,7 +44,7 @@ control 'V-261951' do
     db: input('pg_db'),
     dba: input('pg_dba')
   )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  sql = conn.sql_session(input('pg_dba_password'))
 
   describe sql.query('SHOW shared_preload_libraries;', [conn.db]) do
     its('output') { should match(/pgaudit/) }

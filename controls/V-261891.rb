@@ -50,7 +50,7 @@ control 'V-261891' do
     db: input('pg_db'),
     dba: input('pg_dba')
   )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  sql = conn.sql_session(input('pg_dba_password'))
 
   describe sql.query('SHOW password_encryption;', [conn.db]) do
     its('output.strip') { should cmp input('pg_password_encryption') }
