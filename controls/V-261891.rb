@@ -40,7 +40,8 @@ control 'V-261891' do
   tag rid: 'SV-261891r1000970_rule'
   tag stig_id: 'CD16-00-003800'
   tag cci: ["CCI-000196"]
-  tag nist: []
+  # CCI-000196 has no NIST SP 800-53 Rev 5 mapping in the DISA CCI list (2025-01-23); Rev 4 reference used.
+  tag nist: ["IA-5 (1) (c)"]
   conn = aws_rds_connection(
     aws_instance_id: input('aws_db_instance_identifier'),
     region: input('aws_region'),

@@ -21,7 +21,7 @@ control 'V-261966' do
   tag rid: 'SV-261966r1137664_rule'
   tag stig_id: 'CD16-00-012300'
   tag cci: ["CCI-002450"]
-  tag nist: []
+  tag nist: ["SC-13 b"]
   impact 0.0
   describe 'This control is not applicable: AWS manages the underlying operating system and cryptographic modules for RDS-hosted PostgreSQL. Customers do not have OS/kernel-level access (e.g., /proc/sys/crypto/fips_enabled) required to evaluate FIPS module validation directly; see AWS RDS documentation for FIPS 140-validated endpoint usage.' do
     skip 'This control is not applicable: AWS manages the underlying operating system and cryptographic modules for RDS-hosted PostgreSQL. Customers do not have OS/kernel-level access (e.g., /proc/sys/crypto/fips_enabled) required to evaluate FIPS module validation directly; see AWS RDS documentation for FIPS 140-validated endpoint usage.'

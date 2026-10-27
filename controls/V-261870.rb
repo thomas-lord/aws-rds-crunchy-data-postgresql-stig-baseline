@@ -79,7 +79,7 @@ control 'V-261870' do
   tag rid: 'SV-261870r1000615_rule'
   tag stig_id: 'CD16-00-001400'
   tag cci: ["CCI-000134"]
-  tag nist: []
+  tag nist: ["AU-3 e"]
   conn = aws_rds_connection(
     aws_instance_id: input('aws_db_instance_identifier'),
     region: input('aws_region'),

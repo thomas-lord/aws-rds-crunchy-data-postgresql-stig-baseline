@@ -34,7 +34,7 @@ control 'V-261936' do
   tag rid: 'SV-261936r1137667_rule'
   tag stig_id: 'CD16-00-009200'
   tag cci: ["CCI-002605"]
-  tag nist: []
+  tag nist: ["SI-2 c"]
   aws_ready = command('aws').exist?
   only_if('The AWS CLI must be installed and configured with credentials, and the aws_db_instance_identifier input must be set, to evaluate this control.') do
     aws_ready && !input('aws_db_instance_identifier').empty?

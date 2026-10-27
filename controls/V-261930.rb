@@ -38,7 +38,7 @@ control 'V-261930' do
   tag rid: 'SV-261930r1211024_rule'
   tag stig_id: 'CD16-00-008500'
   tag cci: ["CCI-002475"]
-  tag nist: []
+  tag nist: ["SC-28 (1)"]
   if input('pg_encryption_of_data_at_rest_required')
     conn = aws_rds_connection(
       aws_instance_id: input('aws_db_instance_identifier'),

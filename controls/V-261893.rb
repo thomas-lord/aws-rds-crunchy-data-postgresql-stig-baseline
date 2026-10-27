@@ -71,7 +71,7 @@ control 'V-261893' do
   tag rid: 'SV-261893r1000684_rule'
   tag stig_id: 'CD16-00-004000'
   tag cci: ["CCI-000185"]
-  tag nist: []
+  tag nist: ["IA-5 (2) (b) (1)"]
   describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.' do
     skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.'
   end

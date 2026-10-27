@@ -43,7 +43,8 @@ control 'V-261925' do
   tag rid: 'SV-261925r1000780_rule'
   tag stig_id: 'CD16-00-007900'
   tag cci: ["CCI-001814"]
-  tag nist: []
+  # CCI-001814 has no NIST SP 800-53 Rev 5 mapping in the DISA CCI list (2025-01-23); Rev 4 reference used.
+  tag nist: ["CM-5 (1)"]
   describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.' do
     skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.'
   end

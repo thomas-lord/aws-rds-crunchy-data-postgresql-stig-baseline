@@ -43,7 +43,8 @@ control 'V-261917' do
   tag rid: 'SV-261917r1000962_rule'
   tag stig_id: 'CD16-00-007000'
   tag cci: ["CCI-001844"]
-  tag nist: []
+  # CCI-001844 has no NIST SP 800-53 Rev 5 mapping in the DISA CCI list (2025-01-23); Rev 4 reference used.
+  tag nist: ["AU-3 (2)"]
   aws_ready = command('aws').exist?
   only_if('The AWS CLI must be installed and configured with credentials, and the aws_db_instance_identifier input must be set, to evaluate this control.') do
     aws_ready && !input('aws_db_instance_identifier').empty?

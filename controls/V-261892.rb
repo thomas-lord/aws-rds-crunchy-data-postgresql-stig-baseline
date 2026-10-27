@@ -26,7 +26,7 @@ control 'V-261892' do
   tag rid: 'SV-261892r1000681_rule'
   tag stig_id: 'CD16-00-003900'
   tag cci: ["CCI-000197"]
-  tag nist: []
+  tag nist: ["IA-5 (1) (c)"]
   # AWS RDS PostgreSQL does not expose pg_hba.conf directly; the RDS-specific parameter
   # 'rds.force_ssl' enforces encrypted connections for all clients when enabled, which is
   # the RDS equivalent of ensuring no 'password'/'md5' plaintext-adjacent auth methods are

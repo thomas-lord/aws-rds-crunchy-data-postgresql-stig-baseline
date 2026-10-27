@@ -17,7 +17,7 @@ control 'V-261935' do
   tag rid: 'SV-261935r1000810_rule'
   tag stig_id: 'CD16-00-009100'
   tag cci: ["CCI-002617"]
-  tag nist: []
+  tag nist: ["SI-2 (6)"]
   impact 0.0
   describe 'This control is not applicable: AWS manages the underlying operating system, file system, and installation/removal of PostgreSQL engine binaries and packages for RDS-hosted instances. Customers do not have OS-level or package-manager access required to evaluate this control; engine version and patch status are instead verified via the AWS RDS API (see related controls).' do
     skip 'This control is not applicable: AWS manages the underlying operating system, file system, and installation/removal of PostgreSQL engine binaries and packages for RDS-hosted instances. Customers do not have OS-level or package-manager access required to evaluate this control; engine version and patch status are instead verified via the AWS RDS API (see related controls).'

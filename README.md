@@ -261,6 +261,10 @@ interactive, graphical view of the InSpec results, if useful during review befor
   "Crunchy Data Postgres 16 Security Technical Implementation Guide", V1R3, 01 Jul 2026.
 - Requirement text (titles, check/fix text, severity, CCI, SRG group, STIG IDs) retrieved programmatically from the
   published benchmark for accuracy; see `controls/*.rb` for the per-control source text.
+- NIST SP 800-53 tags (`tag nist`): derived from each control's CCI via the DISA CCI list
+  (`U_CCI_List.xml`, version 2025-01-23), using the **Revision 5** reference. Four CCIs (CCI-000196, CCI-001812,
+  CCI-001814, CCI-001844) have no Rev 5 mapping in that list; those controls use the Rev 4 reference instead and
+  carry a comment saying so.
 
 ## Contributing and Getting Help
 
