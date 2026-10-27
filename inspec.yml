@@ -16,12 +16,26 @@ version: 1.0.0
 inspec_version: ">= 4.0"
 
 inputs:
-- name: pg_dba
-  description: "The postgres DBA (master) user used to connect to the target database. Used as a fallback only: when aws_db_instance_identifier is set and the AWS CLI is available, the actual MasterUsername is auto-discovered via `aws rds describe-db-instances` and takes precedence."
+# =====================================================================
+# REQUIRED: database info. This is the only section a user normally
+# needs to fill in. Everything below it already has a STIG-aligned
+# default and only needs overriding if your organization's documented
+# policy differs from that default.
+#
+# Recommended path: set aws_db_instance_identifier (+ aws_region) and
+# pg_dba_password; pg_host/pg_port/pg_db/pg_dba are then auto-discovered
+# via `aws rds describe-db-instances`. pg_dba_password can never be
+# auto-discovered (it's a secret) and must always be supplied manually.
+# =====================================================================
+- name: aws_db_instance_identifier
+  description: "The RDS DB instance identifier (not the endpoint hostname). When set (and the AWS CLI is available), pg_host/pg_port/pg_db/pg_dba below are auto-discovered via `aws rds describe-db-instances` and the manual values are only used as a fallback."
   type: string
-  value: "postgres"
-  required: true
-  sensitive: true
+  value: ""
+
+- name: aws_region
+  description: "AWS region of the RDS instance, passed to the AWS CLI via --region"
+  type: string
+  value: ""
 
 - name: pg_dba_password
   description: "The password for the postgres DBA user. Always required manually \u2014 the AWS CLI/API has no way to retrieve this secret."
@@ -30,25 +44,44 @@ inputs:
   required: true
   sensitive: true
 
+# --- Manual connection fallback (only used if aws_db_instance_identifier is unset,
+#     or the AWS CLI is unavailable) ---
+- name: pg_dba
+  description: "Fallback postgres DBA (master) user; overridden by the auto-discovered MasterUsername when AWS CLI discovery succeeds."
+  type: string
+  value: "postgres"
+  required: true
+  sensitive: true
+
 - name: pg_host
-  description: "The hostname or endpoint used to connect to the database. Fallback only: auto-discovered from the RDS instance's Endpoint.Address via the AWS CLI when aws_db_instance_identifier is set."
+  description: "Fallback hostname/endpoint; overridden by the auto-discovered Endpoint.Address when AWS CLI discovery succeeds."
   type: string
   value: "localhost"
   required: true
   sensitive: true
 
 - name: pg_port
-  description: "The port used to connect to the database. Fallback only: auto-discovered from the RDS instance's Endpoint.Port via the AWS CLI when aws_db_instance_identifier is set."
+  description: "Fallback port; overridden by the auto-discovered Endpoint.Port when AWS CLI discovery succeeds."
   type: numeric
   value: 5432
   required: true
 
 - name: pg_db
-  description: "The database to connect to for running checks. Fallback only: auto-discovered from the RDS instance's DBName via the AWS CLI when aws_db_instance_identifier is set."
+  description: "Fallback database name; overridden by the auto-discovered DBName when AWS CLI discovery succeeds."
   type: string
   value: "postgres"
   required: true
 
+- name: aws_cli_profile
+  description: "Optional named AWS CLI profile to use (--profile); leave blank to use the runner's default credential chain"
+  type: string
+  value: ""
+
+# =====================================================================
+# OPTIONAL: organization policy overrides. Each of these already has a
+# STIG-aligned default below; only set one here if your documented
+# System Security Plan specifies a different value.
+# =====================================================================
 - name: pg_superusers
   description: "Authorized superuser accounts (e.g., AWS RDS 'rdsadmin')"
   type: array
@@ -106,26 +139,6 @@ inputs:
   type: string
   value: "0600"
 
-- name: pg_tcp_keepalives_idle
-  description: "Organization-defined, nonzero tcp_keepalives_idle (V-261899)"
-  type: string
-  value: "0"
-
-- name: pg_tcp_keepalives_interval
-  description: "Organization-defined, nonzero tcp_keepalives_interval (V-261899)"
-  type: string
-  value: "0"
-
-- name: pg_tcp_keepalives_count
-  description: "Organization-defined, nonzero tcp_keepalives_count (V-261899)"
-  type: string
-  value: "0"
-
-- name: pg_statement_timeout
-  description: "Organization-defined, nonzero statement_timeout (V-261899)"
-  type: string
-  value: "0"
-
 - name: pgaudit_log_items
   description: "Required pgaudit.log categories (V-261938 and related audit-record-generation controls)"
   type: array
@@ -139,22 +152,6 @@ inputs:
   description: "Whether the application owner/AO has determined encryption of data at rest is required (V-261901/930/931)"
   type: boolean
   value: true
-
-# --- AWS CLI inputs (used by controls that check RDS-side configuration via `aws`) ---
-- name: aws_db_instance_identifier
-  description: "The RDS DB instance identifier (not the endpoint hostname) used for `aws rds`/`aws ec2`/`aws cloudwatch` lookups"
-  type: string
-  value: ""
-
-- name: aws_region
-  description: "AWS region of the RDS instance, passed to the AWS CLI via --region"
-  type: string
-  value: ""
-
-- name: aws_cli_profile
-  description: "Optional named AWS CLI profile to use (--profile); leave blank to use the runner's default credential chain"
-  type: string
-  value: ""
 
 - name: pg_storage_alarm_threshold_percent
   description: "Organization-defined percent-utilized threshold at which support staff must be warned of audit/storage capacity (V-261919)"

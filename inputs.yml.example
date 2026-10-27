@@ -1,52 +1,57 @@
 # Example inputs file for aws-rds-crunchy-data-postgresql-stig-baseline
 # Copy to inputs.yml and tailor to your environment:
 #   cp inputs.yml.example inputs.yml
+#
+# In most cases, the only section you need to fill in is "REQUIRED: database
+# info" below. Everything else already has a STIG-aligned default defined in
+# inspec.yml (log_connections=on, ssl=on, password_encryption=scram-sha-256,
+# pgaudit.log=[ddl,role,read,write], etc.) and is derived at run time from the
+# live database (via SQL `SHOW`) or AWS (via the `aws` CLI). Only add an
+# override below if your organization's documented System Security Plan
+# specifies a different value than the STIG default.
 
-# --- Connection settings (required) ---
-pg_dba: 'postgres'
-pg_dba_password: '<password>'
-pg_host: '<endpoint>.rds.amazonaws.com'
-pg_db: 'postgres'
-pg_port: 5432
+# =====================================================================
+# REQUIRED: database info
+# =====================================================================
 
-# --- Authorized accounts ---
-pg_superusers:
-  - 'rdsadmin'
-
-# --- Organization-defined configuration values (tailor to your SSP) ---
-pg_max_connections: 100
-pg_log_line_prefix: '%m [%p]: db=%d,user=%u,app=%a,client=%h '
-pg_log_connections: 'on'
-pg_log_disconnections: 'on'
-pg_log_hostname: 'on'
-pg_timezone: 'UTC'
-pg_ssl: 'on'
-pg_password_encryption: 'scram-sha-256'
-pg_client_min_messages: 'error'
-pg_log_file_mode: '0600'
-pg_tcp_keepalives_idle: '300'
-pg_tcp_keepalives_interval: '30'
-pg_tcp_keepalives_count: '3'
-pg_statement_timeout: '60000'
-
-pgaudit_log_items:
-  - 'ddl'
-  - 'role'
-  - 'read'
-  - 'write'
-
-# Set to false if the application owner/Authorizing Official has determined that
-# encryption of data at rest is not required (affects V-261901, V-261930, V-261931).
-pg_encryption_of_data_at_rest_required: true
-
-# --- AWS CLI-based controls ---
-# Require the `aws` CLI on the runner, authenticated with read-only IAM permissions
-# (rds:DescribeDBInstances, rds:DescribePendingMaintenanceActions,
-# ec2:DescribeSecurityGroups, cloudwatch:DescribeAlarmsForMetric).
-# Leave aws_db_instance_identifier blank to skip these controls (they will be marked
-# not_applicable via `only_if` rather than failing).
+# Recommended: AWS CLI auto-discovery. When aws_db_instance_identifier is set
+# (and the `aws` CLI is installed/authenticated on the runner), the instance's
+# endpoint, port, database name, and master username are looked up
+# automatically via `aws rds describe-db-instances` -- you don't need to type
+# them in below.
 aws_db_instance_identifier: '<rds-db-instance-id>'
 aws_region: 'us-east-1'
-aws_cli_profile: ''
-pg_storage_alarm_threshold_percent: 75
-pg_approved_ingress_cidrs: []
+
+# Always required manually: the AWS API has no way to return this secret.
+pg_dba_password: '<password>'
+
+# --- Manual connection fallback ---
+# Only needed if aws_db_instance_identifier is left blank, or the runner
+# doesn't have AWS CLI access (e.g., connecting from a network path different
+# from where `aws` is authenticated). Ignored (overridden) whenever AWS CLI
+# discovery above succeeds.
+# pg_dba: 'postgres'
+# pg_host: '<endpoint>.rds.amazonaws.com'
+# pg_db: 'postgres'
+# pg_port: 5432
+# aws_cli_profile: ''
+
+# =====================================================================
+# OPTIONAL: organization policy overrides (defaults already STIG-aligned;
+# uncomment and change only what your SSP actually requires to differ)
+# =====================================================================
+# pg_superusers: ['rdsadmin']
+# pg_max_connections: 100
+# pg_log_line_prefix: '%m [%p]: db=%d,user=%u,app=%a,client=%h '
+# pg_log_connections: 'on'
+# pg_log_disconnections: 'on'
+# pg_log_hostname: 'on'
+# pg_timezone: 'UTC'
+# pg_ssl: 'on'
+# pg_password_encryption: 'scram-sha-256'
+# pg_client_min_messages: 'error'
+# pg_log_file_mode: '0600'
+# pgaudit_log_items: ['ddl', 'role', 'read', 'write']
+# pg_encryption_of_data_at_rest_required: true
+# pg_storage_alarm_threshold_percent: 75
+# pg_approved_ingress_cidrs: []

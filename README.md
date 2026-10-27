@@ -111,19 +111,42 @@ psql -d postgresql://<master user>:<password>@<endpoint>.rds.amazonaws.com/postg
 
 ## Inputs: Tailoring the Scan to Your Environment
 
-The following inputs can be set in an inputs `.yml` file. See [inspec.yml](inspec.yml) for the full list, defaults,
-and which controls consume each input. Several inputs capture "organization-defined" values from the STIG text and
-must be tailored to your System Security Plan.
+In most cases, the only thing you need to configure is **database connection info**. Every other input already has
+a STIG-aligned default in [inspec.yml](inspec.yml) and is otherwise derived at run time from the live database
+(SQL `SHOW`) or from AWS (the `aws` CLI) — see "Connection auto-discovery" above and "Control Coverage" below. You
+only need to override a default if your organization's documented System Security Plan actually specifies a
+different value than the STIG default.
+
+### Required
+
+```yaml
+# Recommended: AWS CLI auto-discovers pg_host/pg_port/pg_db/pg_dba for you.
+aws_db_instance_identifier: '<rds-db-instance-id>'
+aws_region: 'us-east-1'
+
+# Always manual -- the AWS API cannot return this secret.
+pg_dba_password: '<password>'
+```
+
+### Manual connection fallback
+
+Only needed if `aws_db_instance_identifier` is left blank or the AWS CLI isn't available to the runner; otherwise
+these are overridden automatically by AWS CLI discovery.
 
 ```yaml
 pg_dba: 'postgres'
-pg_dba_password: '<password>'
 pg_host: '<endpoint>.rds.amazonaws.com'
 pg_db: 'postgres'
 pg_port: 5432
+aws_cli_profile: ''
+```
 
+### Optional policy overrides
+
+Each of these already has a STIG-aligned default; only set one if your SSP requires something different.
+
+```yaml
 pg_superusers: ['rdsadmin']
-
 pg_max_connections: 100
 pg_log_line_prefix: '%m [%p]: db=%d,user=%u,app=%a,client=%h '
 pg_log_connections: 'on'
@@ -134,22 +157,14 @@ pg_ssl: 'on'
 pg_password_encryption: 'scram-sha-256'
 pg_client_min_messages: 'error'
 pg_log_file_mode: '0600'
-pg_tcp_keepalives_idle: '300'
-pg_tcp_keepalives_interval: '30'
-pg_tcp_keepalives_count: '3'
-pg_statement_timeout: '60000'
-
 pgaudit_log_items: ['ddl', 'role', 'read', 'write']
 pg_encryption_of_data_at_rest_required: true
-
-# AWS CLI-based controls (see "AWS CLI prerequisites" above); leave aws_db_instance_identifier
-# blank to skip these controls entirely.
-aws_db_instance_identifier: '<rds-db-instance-id>'
-aws_region: 'us-east-1'
-aws_cli_profile: ''
 pg_storage_alarm_threshold_percent: 75
 pg_approved_ingress_cidrs: []
 ```
+
+See [inspec.yml](inspec.yml) for the full, authoritative input list (with descriptions and which controls consume
+each one) and [inputs.yml.example](inputs.yml.example) for a ready-to-copy starting file.
 
 ## Running This Profile
 

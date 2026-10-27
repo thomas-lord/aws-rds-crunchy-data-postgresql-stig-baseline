@@ -42,16 +42,34 @@ control 'V-261926' do
   region_flag = input('aws_region').empty? ? '' : "--region #{input('aws_region')}"
   profile_flag = input('aws_cli_profile').empty? ? '' : "--profile #{input('aws_cli_profile')}"
 
+  require 'json'
+
   sg_ids_cmd = "aws rds describe-db-instances --db-instance-identifier #{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'DBInstances[0].VpcSecurityGroups[].VpcSecurityGroupId' --output text"
   sg_ids = command(sg_ids_cmd).stdout.split
 
-  sg_ids.each do |sg_id|
-    describe command("aws ec2 describe-security-groups --group-ids #{sg_id} #{region_flag} #{profile_flag} --query 'SecurityGroups[0].IpPermissions[?contains(IpRanges[].CidrIp, `0.0.0.0/0`)]' --output text") do
-      its('stdout.strip') { should be_empty }
-    end
-  end
+  approved_cidrs = input('pg_approved_ingress_cidrs')
 
-  describe 'Manually verify that any non-public ingress CIDRs configured on the security group(s) above are explicitly approved in the organization\'s PPSM CAL / vulnerability assessment (pg_approved_ingress_cidrs input).' do
-    skip 'Manually verify that any non-public ingress CIDRs configured on the security group(s) above are explicitly approved in the organization\'s PPSM CAL / vulnerability assessment (pg_approved_ingress_cidrs input).'
+  sg_ids.each do |sg_id|
+    perms_cmd = "aws ec2 describe-security-groups --group-ids #{sg_id} #{region_flag} #{profile_flag} --query 'SecurityGroups[0].IpPermissions' --output json"
+    result = command(perms_cmd)
+    ingress_cidrs = []
+    if result.exit_status.zero?
+      begin
+        JSON.parse(result.stdout).each do |perm|
+          (perm['IpRanges'] || []).each { |r| ingress_cidrs << r['CidrIp'] }
+        end
+      rescue JSON::ParserError
+        ingress_cidrs = []
+      end
+    end
+
+    describe "Security group #{sg_id} ingress CIDRs (#{ingress_cidrs.join(', ')})" do
+      it "should not include the public 0.0.0.0/0 range" do
+        expect(ingress_cidrs).not_to include('0.0.0.0/0')
+      end
+      it 'should only include CIDRs approved via the pg_approved_ingress_cidrs input (PPSM CAL / vulnerability assessment)' do
+        expect(ingress_cidrs - approved_cidrs).to be_empty
+      end
+    end
   end
 end
