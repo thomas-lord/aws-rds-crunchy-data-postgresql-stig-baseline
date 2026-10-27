@@ -49,8 +49,11 @@ control 'V-261953' do
     its('output') { should match(/pgaudit/) }
   end
 
+  # Read the input outside the describe block: inside one, RSpec treats `input` as an
+  # example-defining method and returns an RSpec::Core::Example, not the value.
+  pgaudit_log_items = input('pgaudit_log_items')
   describe sql.query('SHOW pgaudit.log;', [conn.db]) do
-    input('pgaudit_log_items').each do |item|
+    pgaudit_log_items.each do |item|
       its('output') { should match(/#{item}/) }
     end
   end

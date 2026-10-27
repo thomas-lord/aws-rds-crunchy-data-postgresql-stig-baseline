@@ -46,7 +46,10 @@ control 'V-261919' do
     it { should_not be_empty }
   end
 
-  describe "Manually verify that the CloudWatch alarm(s) listed above (or an equivalent mechanism) notify appropriate support staff once free storage drops below the organization-defined threshold (default #{input('pg_storage_alarm_threshold_percent')} percent utilized)." do
-    skip "Manually verify that the CloudWatch alarm(s) listed above (or an equivalent mechanism) notify appropriate support staff once free storage drops below the organization-defined threshold (default #{input('pg_storage_alarm_threshold_percent')} percent utilized)."
+  # Build the message outside the describe block: inside one, `input` defines an
+  # RSpec example rather than returning the input's value.
+  manual_note = "Manually verify that the CloudWatch alarm(s) listed above (or an equivalent mechanism) notify appropriate support staff once free storage drops below the organization-defined threshold (default #{input('pg_storage_alarm_threshold_percent')} percent utilized)."
+  describe manual_note do
+    skip manual_note
   end
 end
