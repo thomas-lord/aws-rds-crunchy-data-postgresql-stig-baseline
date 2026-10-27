@@ -67,6 +67,21 @@ If the AWS CLI isn't installed/configured or `aws_db_instance_identifier` is lef
 skipped (`only_if`) rather than reported as failing, so the profile still runs cleanly SQL-only when AWS access
 isn't available.
 
+### Connection auto-discovery
+
+All SQL-based controls connect via a shared `aws_rds_connection` resource (see `libraries/aws_rds_connection.rb`)
+that resolves `pg_host`, `pg_port`, `pg_db`, and `pg_dba` from `aws rds describe-db-instances`
+(`Endpoint.Address`, `Endpoint.Port`, `DBName`, `MasterUsername`) whenever `aws_db_instance_identifier` is set and
+the AWS CLI is available — the manual `pg_host`/`pg_port`/`pg_db`/`pg_dba` inputs are then only used as a fallback
+(e.g., when connecting through a bastion/different hostname than the RDS endpoint, or without AWS CLI access).
+**`pg_dba_password` is never discoverable this way and must always be supplied manually** — it's a secret the AWS
+API has no way to return.
+
+Every SQL-based control that connects this way also adds a secondary check of the DB instance's parameter group
+`ParameterApplyStatus`: if it's `pending-reboot`, the control still reports the true *live* SQL `SHOW` result as
+the primary finding, but flags that some parameter-group change may not yet be reflected in that live value —
+belt-and-suspenders rather than trusting the parameter group alone.
+
 ## Getting Started
 
 It is intended and recommended that InSpec and this profile be run from a __"runner"__ host (such as a DevOps

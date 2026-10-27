@@ -31,9 +31,25 @@ control 'V-261892' do
   # 'rds.force_ssl' enforces encrypted connections for all clients when enabled, which is
   # the RDS equivalent of ensuring no 'password'/'md5' plaintext-adjacent auth methods are
   # reachable over an unencrypted channel.
-  sql = postgres_session(input('pg_dba'), input('pg_dba_password'), input('pg_host'), input('pg_port'))
+  conn = aws_rds_connection(
+    aws_instance_id: input('aws_db_instance_identifier'),
+    region: input('aws_region'),
+    profile: input('aws_cli_profile'),
+    host: input('pg_host'),
+    port: input('pg_port'),
+    db: input('pg_db'),
+    dba: input('pg_dba')
+  )
+  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
 
-  describe sql.query("SHOW rds.force_ssl;", [input('pg_db')]) do
+  describe sql.query("SHOW rds.force_ssl;", [conn.db]) do
     its('output.strip') { should cmp '1' }
+  end
+
+  if conn.aws_available?
+    describe 'RDS DB parameter group apply status (flags parameter-group changes not yet applied to the running instance)' do
+      subject { conn.parameter_apply_status }
+      it { should_not cmp 'pending-reboot' }
+    end
   end
 end

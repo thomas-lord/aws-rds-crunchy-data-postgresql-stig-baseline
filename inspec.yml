@@ -17,34 +17,34 @@ inspec_version: ">= 4.0"
 
 inputs:
 - name: pg_dba
-  description: "The postgres DBA user used to connect to the target database"
+  description: "The postgres DBA (master) user used to connect to the target database. Used as a fallback only: when aws_db_instance_identifier is set and the AWS CLI is available, the actual MasterUsername is auto-discovered via `aws rds describe-db-instances` and takes precedence."
   type: string
   value: "postgres"
   required: true
   sensitive: true
 
 - name: pg_dba_password
-  description: "The password for the postgres DBA user"
+  description: "The password for the postgres DBA user. Always required manually \u2014 the AWS CLI/API has no way to retrieve this secret."
   type: string
   value: ""
   required: true
   sensitive: true
 
 - name: pg_host
-  description: "The hostname or endpoint used to connect to the database"
+  description: "The hostname or endpoint used to connect to the database. Fallback only: auto-discovered from the RDS instance's Endpoint.Address via the AWS CLI when aws_db_instance_identifier is set."
   type: string
   value: "localhost"
   required: true
   sensitive: true
 
 - name: pg_port
-  description: "The port used to connect to the database"
+  description: "The port used to connect to the database. Fallback only: auto-discovered from the RDS instance's Endpoint.Port via the AWS CLI when aws_db_instance_identifier is set."
   type: numeric
   value: 5432
   required: true
 
 - name: pg_db
-  description: "The database to connect to for running checks"
+  description: "The database to connect to for running checks. Fallback only: auto-discovered from the RDS instance's DBName via the AWS CLI when aws_db_instance_identifier is set."
   type: string
   value: "postgres"
   required: true

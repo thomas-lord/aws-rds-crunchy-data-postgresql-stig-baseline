@@ -38,21 +38,38 @@ control 'V-261899' do
   tag stig_id: 'CD16-00-004700'
   tag cci: ["CCI-001185"]
   tag nist: []
-  sql = postgres_session(input('pg_dba'), input('pg_dba_password'), input('pg_host'), input('pg_port'))
+  conn = aws_rds_connection(
+    aws_instance_id: input('aws_db_instance_identifier'),
+    region: input('aws_region'),
+    profile: input('aws_cli_profile'),
+    host: input('pg_host'),
+    port: input('pg_port'),
+    db: input('pg_db'),
+    dba: input('pg_dba')
+  )
+  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
 
-  describe sql.query('SHOW tcp_keepalives_idle;', [input('pg_db')]) do
+  describe sql.query('SHOW tcp_keepalives_idle;', [conn.db]) do
     its('output.strip') { should_not cmp '0' }
   end
 
-  describe sql.query('SHOW tcp_keepalives_interval;', [input('pg_db')]) do
+  describe sql.query('SHOW tcp_keepalives_interval;', [conn.db]) do
     its('output.strip') { should_not cmp '0' }
   end
 
-  describe sql.query('SHOW tcp_keepalives_count;', [input('pg_db')]) do
+  describe sql.query('SHOW tcp_keepalives_count;', [conn.db]) do
     its('output.strip') { should_not cmp '0' }
   end
 
-  describe sql.query('SHOW statement_timeout;', [input('pg_db')]) do
+  describe sql.query('SHOW statement_timeout;', [conn.db]) do
     its('output.strip') { should_not cmp '0' }
+  end
+
+
+  if conn.aws_available?
+    describe 'RDS DB parameter group apply status (flags parameter-group changes not yet applied to the running instance)' do
+      subject { conn.parameter_apply_status }
+      it { should_not cmp 'pending-reboot' }
+    end
   end
 end

@@ -34,9 +34,18 @@ control 'V-261901' do
   tag cci: ["CCI-001199"]
   tag nist: []
   if input('pg_encryption_of_data_at_rest_required')
-    sql = postgres_session(input('pg_dba'), input('pg_dba_password'), input('pg_host'), input('pg_port'))
+    conn = aws_rds_connection(
+      aws_instance_id: input('aws_db_instance_identifier'),
+      region: input('aws_region'),
+      profile: input('aws_cli_profile'),
+      host: input('pg_host'),
+      port: input('pg_port'),
+      db: input('pg_db'),
+      dba: input('pg_dba')
+    )
+    sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
 
-    describe sql.query("SELECT installed_version FROM pg_available_extensions WHERE name='pgcrypto';", [input('pg_db')]) do
+    describe sql.query("SELECT installed_version FROM pg_available_extensions WHERE name='pgcrypto';", [conn.db]) do
       its('output.strip') { should_not be_empty }
     end
   else

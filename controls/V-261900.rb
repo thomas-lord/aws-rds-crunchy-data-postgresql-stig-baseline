@@ -36,9 +36,26 @@ control 'V-261900' do
   tag stig_id: 'CD16-00-004900'
   tag cci: ["CCI-001188"]
   tag nist: []
-  sql = postgres_session(input('pg_dba'), input('pg_dba_password'), input('pg_host'), input('pg_port'))
+  conn = aws_rds_connection(
+    aws_instance_id: input('aws_db_instance_identifier'),
+    region: input('aws_region'),
+    profile: input('aws_cli_profile'),
+    host: input('pg_host'),
+    port: input('pg_port'),
+    db: input('pg_db'),
+    dba: input('pg_dba')
+  )
+  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
 
-  describe sql.query('SHOW ssl;', [input('pg_db')]) do
+  describe sql.query('SHOW ssl;', [conn.db]) do
     its('output.strip') { should cmp input('pg_ssl') }
+  end
+
+
+  if conn.aws_available?
+    describe 'RDS DB parameter group apply status (flags parameter-group changes not yet applied to the running instance)' do
+      subject { conn.parameter_apply_status }
+      it { should_not cmp 'pending-reboot' }
+    end
   end
 end
