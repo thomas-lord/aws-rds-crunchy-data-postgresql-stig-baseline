@@ -76,6 +76,13 @@ module Inspec::Resources
       @aws_available = !@aws_instance_id.empty? && inspec.command('aws').exist?
     end
 
+    # Any field of the cached `describe-db-instances` result, e.g.
+    # aws_instance_attr('StorageEncrypted'). Returns nil when AWS discovery is
+    # unavailable; raises (like host/port) if discovery was requested but failed.
+    def aws_instance_attr(*path)
+      aws_attr(*path)
+    end
+
     # The RDS DB instance's parameter-group apply status (e.g. "in-sync" or
     # "pending-reboot"). Returns nil when AWS discovery is unavailable.
     def parameter_apply_status

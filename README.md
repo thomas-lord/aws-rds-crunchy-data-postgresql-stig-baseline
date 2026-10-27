@@ -37,7 +37,7 @@ Of the 111 requirements in V1R3:
 | Manual review required | 34 | Depends on organizational policy, documented procedures, or artifacts (e.g., SSP, PPSM CAL, console configuration) that no tool — SQL or AWS CLI — can resolve on its own |
 | Not Applicable — OS-managed on RDS | 8 | AWS manages the underlying OS, filesystem, and package/binary lifecycle for RDS; `impact 0.0` with justification |
 | Not Applicable — FIPS/kernel-managed on RDS | 3 | No OS/kernel access on RDS to verify FIPS module state; `impact 0.0` with justification |
-| pgcrypto-gated (encryption at rest) | 3 | Verifies `pgcrypto` extension availability when encryption of data at rest is required (input-gated) |
+| Encryption at rest (SQL + AWS CLI) | 3 | When required (input-gated): `aws rds describe-db-instances` confirms `StorageEncrypted` (KMS disk-level encryption), and SQL confirms `pgcrypto` is available in `pg_available_extensions`; the storage check is skipped for manual review if AWS discovery isn't in use (V-261901, V-261930, V-261931) |
 | **AWS CLI: security group exposure** | 2 | `aws ec2 describe-security-groups` on the instance's VPC SGs — flags any `0.0.0.0/0` ingress rule (V-261889, V-261926) |
 | **AWS CLI: CloudWatch Logs export** | 2 | `aws rds describe-db-instances` — confirms `postgresql` is in `EnabledCloudwatchLogsExports` (RDS's equivalent of centralized/syslog logging) (V-261917, V-261967) |
 | Superuser privilege check (SQL) | 1 | Queries `pg_roles` for `rolsuper` and compares against `pg_superusers`; schema/table grant review flagged manual (V-261924) |
