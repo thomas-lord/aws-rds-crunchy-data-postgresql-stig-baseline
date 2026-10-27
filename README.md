@@ -82,19 +82,37 @@ Every SQL-based control that connects this way also adds a secondary check of th
 the primary finding, but flags that some parameter-group change may not yet be reflected in that live value —
 belt-and-suspenders rather than trusting the parameter group alone.
 
-## Getting Started
+## Prerequisites
 
-It is intended and recommended that InSpec and this profile be run from a __"runner"__ host (such as a DevOps
-orchestration server, an administrative management system, or a developer's workstation/laptop) against the target.
-This can be any Unix/Linux/macOS runner host with network access to the target RDS instance.
+This profile is **not** a standalone script — it's an [InSpec](https://www.chef.io/products/chef-inspec) profile
+and requires the InSpec engine itself to be installed before it will run. It is intended to be run from a
+__"runner"__ host (a DevOps orchestration server, an administrative management system, or a developer's
+workstation/laptop) against the target RDS instance. This can be any Unix/Linux/macOS runner host with network
+access to the target.
 
-__For the best security of the runner, always install the _latest version_ of InSpec.__
+### 1. Install InSpec
 
-Latest versions and installation options are available at the [InSpec](http://inspec.io/) site.
+InSpec is a Ruby-based CLI/engine; installing it also installs the Ruby runtime it needs. Pick one:
 
-### PSQL client setup
+```bash
+# Option A (recommended, Linux): official Chef Omnitruck install script
+curl https://omnitruck.chef.io/install.sh | sudo bash -s -- -P inspec
 
-InSpec expects the `psql` client to be available on the runner.
+# Option B (macOS/Linux with Ruby + a C toolchain already available): via RubyGems
+gem install inspec-bin
+```
+
+Verify the install:
+
+```bash
+inspec version
+```
+
+Full install docs/options: [InSpec downloads](https://www.chef.io/downloads/tools/inspec).
+
+### 2. Install the `psql` client
+
+Required for all SQL-based controls (the majority of this profile).
 
 ```bash
 # Linux example
@@ -107,6 +125,27 @@ Test connectivity to your instance from the runner host:
 
 ```bash
 psql -d postgresql://<master user>:<password>@<endpoint>.rds.amazonaws.com/postgres
+```
+
+### 3. Install the AWS CLI (optional)
+
+Only required for the AWS CLI-based controls and connection auto-discovery described below; the profile still runs
+(with those specific controls skipped) without it.
+
+```bash
+# See https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html for your platform
+aws --version
+aws sts get-caller-identity   # confirms credentials are configured
+```
+
+### 4. Install the `saf` CLI (only needed to produce a `.ckl` for ATO/eMASS)
+
+Not required to run the scan itself — only for the conversion step described in "Producing an ATO Checklist"
+below. Requires Node.js.
+
+```bash
+npm install -g @mitre/saf
+saf --version
 ```
 
 ## Inputs: Tailoring the Scan to Your Environment
@@ -179,14 +218,10 @@ inspec exec . --input-file=inputs.yml --reporter=cli json:results.json
 ## Producing an ATO Checklist (.ckl) for eMASS
 
 `inspec exec` produces results in Heimdall Data Format (HDF) JSON — not directly an eMASS/STIG-Viewer `.ckl` file.
-To get a `.ckl`, convert the HDF output with the free, open-source `saf` CLI (no MITRE account/affiliation
-required):
+To get a `.ckl`, convert the HDF output with the `saf` CLI (see Prerequisites above) and the results file from
+"Running This Profile" above:
 
 ```bash
-# One-time install
-npm install -g @mitre/saf
-
-# Convert the InSpec results from "Running This Profile" above into a .ckl
 saf convert hdf2ckl -i results.json -o results.ckl \
   --hostname <asset-hostname> --fqdn <asset-fqdn> --ip <asset-ip>
 ```
