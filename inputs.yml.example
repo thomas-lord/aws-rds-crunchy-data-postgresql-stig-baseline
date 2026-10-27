@@ -38,3 +38,15 @@ pgaudit_log_items:
 # Set to false if the application owner/Authorizing Official has determined that
 # encryption of data at rest is not required (affects V-261901, V-261930, V-261931).
 pg_encryption_of_data_at_rest_required: true
+
+# --- AWS CLI-based controls ---
+# Require the `aws` CLI on the runner, authenticated with read-only IAM permissions
+# (rds:DescribeDBInstances, rds:DescribePendingMaintenanceActions,
+# ec2:DescribeSecurityGroups, cloudwatch:DescribeAlarmsForMetric).
+# Leave aws_db_instance_identifier blank to skip these controls (they will be marked
+# not_applicable via `only_if` rather than failing).
+aws_db_instance_identifier: '<rds-db-instance-id>'
+aws_region: 'us-east-1'
+aws_cli_profile: ''
+pg_storage_alarm_threshold_percent: 75
+pg_approved_ingress_cidrs: []

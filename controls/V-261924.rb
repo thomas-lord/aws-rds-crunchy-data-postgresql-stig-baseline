@@ -35,7 +35,14 @@ control 'V-261924' do
   tag stig_id: 'CD16-00-007800'
   tag cci: ["CCI-001813"]
   tag nist: []
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.'
+  sql = postgres_session(input('pg_dba'), input('pg_dba_password'), input('pg_host'), input('pg_port'))
+
+  unauthorized_superusers_sql = "SELECT rolname FROM pg_roles WHERE rolsuper = true;"
+  describe sql.query(unauthorized_superusers_sql, [input('pg_db')]).lines do
+    it { should all(be_in input('pg_superusers')) }
+  end
+
+  describe 'Manually review database/schema-level privileges (\\l and \\dn+ output) for unauthorized update ("W") or create ("C") grants; this portion cannot be fully automated without an organization-defined authorization matrix.' do
+    skip 'Manually review database/schema-level privileges (\\l and \\dn+ output) for unauthorized update ("W") or create ("C") grants; this portion cannot be fully automated without an organization-defined authorization matrix.'
   end
 end

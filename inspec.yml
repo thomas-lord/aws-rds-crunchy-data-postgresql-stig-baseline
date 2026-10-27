@@ -139,3 +139,29 @@ inputs:
   description: "Whether the application owner/AO has determined encryption of data at rest is required (V-261901/930/931)"
   type: boolean
   value: true
+
+# --- AWS CLI inputs (used by controls that check RDS-side configuration via `aws`) ---
+- name: aws_db_instance_identifier
+  description: "The RDS DB instance identifier (not the endpoint hostname) used for `aws rds`/`aws ec2`/`aws cloudwatch` lookups"
+  type: string
+  value: ""
+
+- name: aws_region
+  description: "AWS region of the RDS instance, passed to the AWS CLI via --region"
+  type: string
+  value: ""
+
+- name: aws_cli_profile
+  description: "Optional named AWS CLI profile to use (--profile); leave blank to use the runner's default credential chain"
+  type: string
+  value: ""
+
+- name: pg_storage_alarm_threshold_percent
+  description: "Organization-defined percent-utilized threshold at which support staff must be warned of audit/storage capacity (V-261919)"
+  type: numeric
+  value: 75
+
+- name: pg_approved_ingress_cidrs
+  description: "CIDR blocks approved by the organization's PPSM CAL/vulnerability assessment to reach the database port (V-261889/V-261926); an open 0.0.0.0/0 rule not in this list is a finding"
+  type: array
+  value: []

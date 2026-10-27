@@ -23,23 +23,49 @@ InSpec profile to validate the secure configuration of AWS RDS-hosted PostgreSQL
 
 ## Control Coverage
 
+This profile uses a **hybrid** automation approach: most checks run entirely over the PostgreSQL SQL session, but a
+subset of controls ask about facts that only exist on the AWS side (RDS configuration, security groups, CloudWatch
+alarms, pending maintenance) — those are checked via the **AWS CLI** (`aws rds`, `aws ec2`, `aws cloudwatch`)
+instead of being left as pure manual review.
+
 Of the 111 requirements in V1R3:
 
 | Category | Count | Handling |
 |---|---|---|
-| Automated SQL/parameter checks | 21 | `SHOW <parameter>` compared against an input-driven expected value |
-| pgaudit-based audit checks | 17 | Verifies `pgaudit` is loaded via `shared_preload_libraries` and `pgaudit.log` contains required categories |
-| pgcrypto-gated (encryption at rest) | 3 | Verifies `pgcrypto` extension availability when encryption of data at rest is required (input-gated) |
-| RDS-specific SSL enforcement | 1 | Checks `rds.force_ssl` as the RDS equivalent of restricting plaintext-adjacent auth methods |
-| Vendor-supported version | 1 | Reports `server_version`; flags for manual verification against the current support lifecycle |
-| Not Applicable — OS-managed on RDS | 7 | AWS manages the underlying OS/filesystem for RDS; `impact 0.0` with justification |
+| pgaudit-based audit checks | 29 | Verifies `pgaudit` is loaded via `shared_preload_libraries` and `pgaudit.log` contains required categories |
+| Automated SQL/parameter checks | 23 | `SHOW <parameter>` compared against an input-driven expected value |
+| Manual review required | 34 | Depends on organizational policy, documented procedures, or artifacts (e.g., SSP, PPSM CAL, console configuration) that no tool — SQL or AWS CLI — can resolve on its own |
+| Not Applicable — OS-managed on RDS | 8 | AWS manages the underlying OS, filesystem, and package/binary lifecycle for RDS; `impact 0.0` with justification |
 | Not Applicable — FIPS/kernel-managed on RDS | 3 | No OS/kernel access on RDS to verify FIPS module state; `impact 0.0` with justification |
-| Manual review required | 58 | Depends on organizational policy, documented procedures, or artifacts (e.g., SSP, PPSM CAL, CloudWatch/console configuration) that cannot be verified via a SQL session |
+| pgcrypto-gated (encryption at rest) | 3 | Verifies `pgcrypto` extension availability when encryption of data at rest is required (input-gated) |
+| **AWS CLI: security group exposure** | 2 | `aws ec2 describe-security-groups` on the instance's VPC SGs — flags any `0.0.0.0/0` ingress rule (V-261889, V-261926) |
+| **AWS CLI: CloudWatch Logs export** | 2 | `aws rds describe-db-instances` — confirms `postgresql` is in `EnabledCloudwatchLogsExports` (RDS's equivalent of centralized/syslog logging) (V-261917, V-261967) |
+| Superuser privilege check (SQL) | 1 | Queries `pg_roles` for `rolsuper` and compares against `pg_superusers`; schema/table grant review flagged manual (V-261924) |
+| **AWS CLI: IAM database authentication** | 1 | `aws rds describe-db-instances` — confirms `IAMDatabaseAuthenticationEnabled` (V-261858) |
+| RDS-specific SSL enforcement (SQL) | 1 | Checks `rds.force_ssl`, the RDS equivalent of restricting plaintext-adjacent auth methods (V-261892) |
+| **AWS CLI: storage capacity** | 1 | `aws rds describe-db-instances` — reports `AllocatedStorage`/`MaxAllocatedStorage` for storage-autoscaling headroom review (V-261918) |
+| **AWS CLI: storage alarm presence** | 1 | `aws cloudwatch describe-alarms-for-metric` — confirms a `FreeStorageSpace` alarm exists (V-261919) |
+| **AWS CLI: patch timeliness** | 1 | `aws rds describe-db-instances` + `describe-pending-maintenance-actions` — flags any pending/overdue maintenance (V-261936) |
+| Vendor-supported version (SQL) | 1 | Reports `server_version`; flags for manual verification against the current support lifecycle |
 
 Every control's `desc 'check'` and `desc 'fix'` text, along with its severity, CCI, SRG group ID (`gtitle`), and STIG ID
 (`stig_id`), is copied verbatim from the published benchmark — nothing here is inferred or fabricated. Only the
-*automation* approach (how a check is implemented in InSpec, given AWS RDS's managed-service constraints) reflects
-engineering judgment.
+*automation* approach (how a check is implemented, given AWS RDS's managed-service constraints) reflects engineering
+judgment, and every AWS CLI-based control still includes a `describe` block flagging any residual manual-review
+aspect it doesn't fully resolve (e.g., whether a given CIDR is actually PPSM-approved).
+
+### AWS CLI prerequisites
+
+Controls tagged "AWS CLI" above require:
+- The `aws` CLI installed on the runner, authenticated with read-only IAM permissions
+  (`rds:DescribeDBInstances`, `rds:DescribePendingMaintenanceActions`, `ec2:DescribeSecurityGroups`,
+  `cloudwatch:DescribeAlarmsForMetric`).
+- The `aws_db_instance_identifier` input set to the RDS **DB instance identifier** (not the connection endpoint).
+- Optionally `aws_region` / `aws_cli_profile` if not relying on the runner's default AWS configuration.
+
+If the AWS CLI isn't installed/configured or `aws_db_instance_identifier` is left blank, these controls are
+skipped (`only_if`) rather than reported as failing, so the profile still runs cleanly SQL-only when AWS access
+isn't available.
 
 ## Getting Started
 
@@ -100,6 +126,14 @@ pg_statement_timeout: '60000'
 
 pgaudit_log_items: ['ddl', 'role', 'read', 'write']
 pg_encryption_of_data_at_rest_required: true
+
+# AWS CLI-based controls (see "AWS CLI prerequisites" above); leave aws_db_instance_identifier
+# blank to skip these controls entirely.
+aws_db_instance_identifier: '<rds-db-instance-id>'
+aws_region: 'us-east-1'
+aws_cli_profile: ''
+pg_storage_alarm_threshold_percent: 75
+pg_approved_ingress_cidrs: []
 ```
 
 ## Running This Profile

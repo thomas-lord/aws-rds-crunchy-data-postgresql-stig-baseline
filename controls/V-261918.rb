@@ -16,7 +16,20 @@ control 'V-261918' do
   tag stig_id: 'CD16-00-007200'
   tag cci: ["CCI-001849"]
   tag nist: []
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.'
+  aws_ready = command('aws').exist?
+  only_if('The AWS CLI must be installed and configured with credentials, and the aws_db_instance_identifier input must be set, to evaluate this control.') do
+    aws_ready && !input('aws_db_instance_identifier').empty?
+  end
+
+  region_flag = input('aws_region').empty? ? '' : "--region #{input('aws_region')}"
+  profile_flag = input('aws_cli_profile').empty? ? '' : "--profile #{input('aws_cli_profile')}"
+
+  describe command("aws rds describe-db-instances --db-instance-identifier #{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'DBInstances[0].[AllocatedStorage,MaxAllocatedStorage]' --output text") do
+    its('stdout.split') { should_not be_empty }
+    its('exit_status') { should eq 0 }
+  end
+
+  describe 'Verify (from the AllocatedStorage/MaxAllocatedStorage values reported above) that RDS Storage Autoscaling is configured with headroom sufficient for the organization-defined audit record storage requirement.' do
+    skip 'Verify (from the AllocatedStorage/MaxAllocatedStorage values reported above) that RDS Storage Autoscaling is configured with headroom sufficient for the organization-defined audit record storage requirement.'
   end
 end

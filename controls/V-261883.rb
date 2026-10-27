@@ -21,7 +21,7 @@ control 'V-261883' do
   tag cci: ["CCI-001499"]
   tag nist: []
   impact 0.0
-  describe 'This control is not applicable: AWS manages the underlying operating system, file system, and installation/patching of the PostgreSQL engine for RDS-hosted instances. Customers do not have OS-level or file-system access required to evaluate this control.' do
-    skip 'This control is not applicable: AWS manages the underlying operating system, file system, and installation/patching of the PostgreSQL engine for RDS-hosted instances. Customers do not have OS-level or file-system access required to evaluate this control.'
+  describe 'This control is not applicable: AWS manages the underlying operating system, file system, and installation/removal of PostgreSQL engine binaries and packages for RDS-hosted instances. Customers do not have OS-level or package-manager access required to evaluate this control; engine version and patch status are instead verified via the AWS RDS API (see related controls).' do
+    skip 'This control is not applicable: AWS manages the underlying operating system, file system, and installation/removal of PostgreSQL engine binaries and packages for RDS-hosted instances. Customers do not have OS-level or package-manager access required to evaluate this control; engine version and patch status are instead verified via the AWS RDS API (see related controls).'
   end
 end

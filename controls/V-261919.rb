@@ -38,7 +38,21 @@ control 'V-261919' do
   tag stig_id: 'CD16-00-007300'
   tag cci: ["CCI-001855"]
   tag nist: []
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.'
+  aws_ready = command('aws').exist?
+  only_if('The AWS CLI must be installed and configured with credentials, and the aws_db_instance_identifier input must be set, to evaluate this control.') do
+    aws_ready && !input('aws_db_instance_identifier').empty?
+  end
+
+  region_flag = input('aws_region').empty? ? '' : "--region #{input('aws_region')}"
+  profile_flag = input('aws_cli_profile').empty? ? '' : "--profile #{input('aws_cli_profile')}"
+
+  alarms_cmd = "aws cloudwatch describe-alarms-for-metric --namespace AWS/RDS --metric-name FreeStorageSpace --dimensions Name=DBInstanceIdentifier,Value=#{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'MetricAlarms' --output json"
+  describe command(alarms_cmd) do
+    its('exit_status') { should eq 0 }
+    its('stdout.strip') { should_not cmp '[]' }
+  end
+
+  describe "Manually verify that the CloudWatch alarm(s) listed above (or an equivalent mechanism) notify appropriate support staff once free storage drops below the organization-defined threshold (default #{input('pg_storage_alarm_threshold_percent')} percent utilized)." do
+    skip "Manually verify that the CloudWatch alarm(s) listed above (or an equivalent mechanism) notify appropriate support staff once free storage drops below the organization-defined threshold (default #{input('pg_storage_alarm_threshold_percent')} percent utilized)."
   end
 end

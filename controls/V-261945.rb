@@ -37,7 +37,15 @@ control 'V-261945' do
   tag stig_id: 'CD16-00-010100'
   tag cci: ["CCI-000172"]
   tag nist: []
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.'
+  sql = postgres_session(input('pg_dba'), input('pg_dba_password'), input('pg_host'), input('pg_port'))
+
+  describe sql.query('SHOW shared_preload_libraries;', [input('pg_db')]) do
+    its('output') { should match(/pgaudit/) }
+  end
+
+  describe sql.query('SHOW pgaudit.log;', [input('pg_db')]) do
+    input('pgaudit_log_items').each do |item|
+      its('output') { should match(/#{item}/) }
+    end
   end
 end

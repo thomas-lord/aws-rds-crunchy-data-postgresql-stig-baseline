@@ -34,7 +34,24 @@ control 'V-261926' do
   tag stig_id: 'CD16-00-008000'
   tag cci: ["CCI-001762"]
   tag nist: []
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.'
+  aws_ready = command('aws').exist?
+  only_if('The AWS CLI must be installed and configured with credentials, and the aws_db_instance_identifier input must be set, to evaluate this control.') do
+    aws_ready && !input('aws_db_instance_identifier').empty?
+  end
+
+  region_flag = input('aws_region').empty? ? '' : "--region #{input('aws_region')}"
+  profile_flag = input('aws_cli_profile').empty? ? '' : "--profile #{input('aws_cli_profile')}"
+
+  sg_ids_cmd = "aws rds describe-db-instances --db-instance-identifier #{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'DBInstances[0].VpcSecurityGroups[].VpcSecurityGroupId' --output text"
+  sg_ids = command(sg_ids_cmd).stdout.split
+
+  sg_ids.each do |sg_id|
+    describe command("aws ec2 describe-security-groups --group-ids #{sg_id} #{region_flag} #{profile_flag} --query 'SecurityGroups[0].IpPermissions[?contains(IpRanges[].CidrIp, `0.0.0.0/0`)]' --output text") do
+      its('stdout.strip') { should be_empty }
+    end
+  end
+
+  describe 'Manually verify that any non-public ingress CIDRs configured on the security group(s) above are explicitly approved in the organization\'s PPSM CAL / vulnerability assessment (pg_approved_ingress_cidrs input).' do
+    skip 'Manually verify that any non-public ingress CIDRs configured on the security group(s) above are explicitly approved in the organization\'s PPSM CAL / vulnerability assessment (pg_approved_ingress_cidrs input).'
   end
 end

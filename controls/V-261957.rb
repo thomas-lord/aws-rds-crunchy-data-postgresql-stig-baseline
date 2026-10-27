@@ -50,7 +50,13 @@ control 'V-261957' do
   tag stig_id: 'CD16-00-011300'
   tag cci: ["CCI-000172"]
   tag nist: []
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.'
+  sql = postgres_session(input('pg_dba'), input('pg_dba_password'), input('pg_host'), input('pg_port'))
+
+  describe sql.query('SHOW log_connections;', [input('pg_db')]) do
+    its('output.strip') { should cmp input('pg_log_connections') }
+  end
+
+  describe sql.query('SHOW log_disconnections;', [input('pg_db')]) do
+    its('output.strip') { should cmp input('pg_log_disconnections') }
   end
 end
