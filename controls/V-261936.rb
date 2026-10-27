@@ -47,7 +47,9 @@ control 'V-261936' do
     its('exit_status') { should eq 0 }
   end
 
-  pending_cmd = "aws rds describe-pending-maintenance-actions #{region_flag} #{profile_flag} --query \"PendingMaintenanceActions[?ResourceIdentifier=='#{input('aws_db_instance_identifier')}']\" --output json"
+  # Filter server-side by instance: the ResourceIdentifier field in the response is the
+  # instance ARN, so filtering it client-side against the bare identifier never matched.
+  pending_cmd = "aws rds describe-pending-maintenance-actions --filters Name=db-instance-id,Values=#{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'PendingMaintenanceActions' --output json"
   describe command(pending_cmd) do
     its('exit_status') { should eq 0 }
     its('stdout.strip') { should cmp '[]' }
