@@ -176,11 +176,37 @@ cp inputs.yml.example inputs.yml   # create and edit with your environment's val
 inspec exec . --input-file=inputs.yml --reporter=cli json:results.json
 ```
 
+## Producing an ATO Checklist (.ckl) for eMASS
+
+`inspec exec` produces results in Heimdall Data Format (HDF) JSON — not directly an eMASS/STIG-Viewer `.ckl` file.
+To get a `.ckl`, convert the HDF output with the free, open-source `saf` CLI (no MITRE account/affiliation
+required):
+
+```bash
+# One-time install
+npm install -g @mitre/saf
+
+# Convert the InSpec results from "Running This Profile" above into a .ckl
+saf convert hdf2ckl -i results.json -o results.ckl \
+  --hostname <asset-hostname> --fqdn <asset-fqdn> --ip <asset-ip>
+```
+
+`saf convert hdf2ckl` builds the checklist directly from the HDF file's embedded control metadata — the
+`stig_id`/`gid` (Vuln ID)/`cci`/`severity` tags already present on every control in this profile — so no separate
+blank `.ckl` template is required. Pass `-m <metadata.json>` (generate a starting file with
+`saf generate ckl_metadata -o metadata.json`) if you need to set additional asset/STIG metadata fields (role,
+tech area, classification marking, etc.) beyond the `--hostname`/`--fqdn`/`--ip`/`--mac` flags.
+
+> [!NOTE]
+> This STIG has no DISA-published SCAP/OVAL content — DISA distributes it as a "Manual STIG" (XCCDF with
+> check/fix text only, no automated OVAL probes), which is why a SCAP Compliance Checker (SCC) scan isn't an
+> option here. InSpec plus this `hdf2ckl` conversion is the practical path to an eMASS-importable checklist
+> for this particular STIG.
+
 ## Viewing the JSON Results
 
-The JSON results file can be loaded into [heimdall-lite](https://heimdall-lite.mitre.org/) for an interactive,
-graphical view of the InSpec results, or into a full [Heimdall](https://github.com/mitre/heimdall) server for
-storing and comparing multiple profile runs.
+The JSON results file can optionally also be loaded into [heimdall-lite](https://heimdall-lite.mitre.org/) for an
+interactive, graphical view of the InSpec results, if useful during review before generating the final `.ckl`.
 
 ## Source of Truth
 
