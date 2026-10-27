@@ -1,13 +1,7 @@
-© 2025 The MITRE Corporation.
- 
-Approved for Public Release; Distribution Unlimited. Case Number 18-3678.
- 
 NOTICE
- 
-MITRE grants permission to reproduce, distribute, modify, and otherwise use this software to the extent permitted by the licensed terms provided in the LICENSE.md file included with this project.
- 
-This software was produced by The MITRE Corporation for the U. S. Government under contract. As such the U.S. Government has certain use and data rights in this software. No use other than those granted to the U. S. Government, or to those acting on behalf of the U. S. Government, under these contract arrangements is authorized without the express written permission of The MITRE Corporation.
- 
-For further information, please contact The MITRE Corporation, Contracts Management Office, 7515 Colshire Drive, McLean, VA 22102-7539, (703) 983-6000.
 
-DISA STIGs are published by DISA IASE, see: https://iase.disa.mil/Pages/privacy_policy.aspx
+This InSpec profile is an independently authored implementation of the DISA "Crunchy Data Postgres 16 Security
+Technical Implementation Guide" (STIG). It was built directly from the published benchmark and is not derived from,
+and carries no dependency on, any MITRE-maintained InSpec profile.
+
+DISA STIGs are published by DISA Cyber Exchange; see https://public.cyber.mil/stigs/ for full terms of use.

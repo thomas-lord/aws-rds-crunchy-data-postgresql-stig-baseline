@@ -1,0 +1,29 @@
+control 'V-261966' do
+  title 'PostgreSQL must implement NIST FIPS 140-2 or 140-3 validated cryptographic modules to protect unclassified information requiring confidentiality and cryptographic protection, in accordance with the data owners\' requirements.'
+  desc 'check', <<~EOT
+    As the system administrator, run the following to ensure FIPS is enabled:
+
+    $ cat /proc/sys/crypto/fips_enabled
+
+    If fips_enabled is not "1", this is a finding.
+  EOT
+  desc 'fix', <<~EOT
+    Configure OpenSSL to be FIPS compliant.
+
+    PostgreSQL uses OpenSSL for cryptographic modules. To configure OpenSSL to be FIPS 140-2 compliant, refer to the official RHEL Documentation: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/security_hardening/using-the-system-wide-cryptographic-policies_security-hardening#switching-the-system-to-fips-mode_using-the-system-wide-cryptographic-policies.
+
+    For more information on configuring PostgreSQL to use SSL, refer to supplementary content APPENDIX-G.
+  EOT
+  impact 0.5
+  tag severity: 'medium'
+  tag gtitle: 'SRG-APP-000514-DB-000383'
+  tag gid: 'V-261966'
+  tag rid: 'SV-261966r1137664_rule'
+  tag stig_id: 'CD16-00-012300'
+  tag cci: ["CCI-002450"]
+  tag nist: []
+  impact 0.0
+  describe 'This control is not applicable: AWS manages the underlying operating system and cryptographic modules for RDS-hosted PostgreSQL. Customers do not have OS/kernel-level access (e.g., /proc/sys/crypto/fips_enabled) required to evaluate FIPS module validation directly; see AWS RDS documentation for FIPS 140-validated endpoint usage.' do
+    skip 'This control is not applicable: AWS manages the underlying operating system and cryptographic modules for RDS-hosted PostgreSQL. Customers do not have OS/kernel-level access (e.g., /proc/sys/crypto/fips_enabled) required to evaluate FIPS module validation directly; see AWS RDS documentation for FIPS 140-validated endpoint usage.'
+  end
+end

@@ -1,0 +1,36 @@
+control 'V-261915' do
+  title 'PostgreSQL must prevent nonprivileged users from executing privileged functions, to include disabling, circumventing, or altering implemented security safeguards/countermeasures.'
+  desc 'check', <<~EOT
+    Review the system documentation to obtain the definition of the PostgreSQL functionality considered privileged in the context of the system in question.
+
+    Review the PostgreSQL security configuration and/or other means used to protect privileged functionality from unauthorized use.
+
+    If the configuration does not protect all of the actions defined as privileged, this is a finding.
+
+    If PostgreSQL instance uses procedural languages, such as pl/Python or pl/R, without Authorizing Official (AO) authorization, this is a finding.
+  EOT
+  desc 'fix', <<~EOT
+    Configure PostgreSQL security to protect all privileged functionality.
+
+    If pl/R and pl/Python are used, document their intended use, document users that have access to pl/R and pl/Python, as well as their business use case, such as data-analytics or data-mining. Because of the risks associated with using pl/R and pl/Python, their use must have AO risk acceptance.
+
+    To remove unwanted extensions, use:
+
+    DROP EXTENSION <extension_name>
+
+    To remove unwanted privileges from a role, use the REVOKE command.
+
+    Refer to the PostgreSQL documentation for more details: http://www.postgresql.org/docs/current/static/sql-revoke.html.
+  EOT
+  impact 0.5
+  tag severity: 'medium'
+  tag gtitle: 'SRG-APP-000340-DB-000304'
+  tag gid: 'V-261915'
+  tag rid: 'SV-261915r1000750_rule'
+  tag stig_id: 'CD16-00-006800'
+  tag cci: ["CCI-002235"]
+  tag nist: []
+  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.' do
+    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.'
+  end
+end

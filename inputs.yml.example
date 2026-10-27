@@ -1,0 +1,40 @@
+# Example inputs file for aws-rds-crunchy-data-postgresql-stig-baseline
+# Copy to inputs.yml and tailor to your environment:
+#   cp inputs.yml.example inputs.yml
+
+# --- Connection settings (required) ---
+pg_dba: 'postgres'
+pg_dba_password: '<password>'
+pg_host: '<endpoint>.rds.amazonaws.com'
+pg_db: 'postgres'
+pg_port: 5432
+
+# --- Authorized accounts ---
+pg_superusers:
+  - 'rdsadmin'
+
+# --- Organization-defined configuration values (tailor to your SSP) ---
+pg_max_connections: 100
+pg_log_line_prefix: '%m [%p]: db=%d,user=%u,app=%a,client=%h '
+pg_log_connections: 'on'
+pg_log_disconnections: 'on'
+pg_log_hostname: 'on'
+pg_timezone: 'UTC'
+pg_ssl: 'on'
+pg_password_encryption: 'scram-sha-256'
+pg_client_min_messages: 'error'
+pg_log_file_mode: '0600'
+pg_tcp_keepalives_idle: '300'
+pg_tcp_keepalives_interval: '30'
+pg_tcp_keepalives_count: '3'
+pg_statement_timeout: '60000'
+
+pgaudit_log_items:
+  - 'ddl'
+  - 'role'
+  - 'read'
+  - 'write'
+
+# Set to false if the application owner/Authorizing Official has determined that
+# encryption of data at rest is not required (affects V-261901, V-261930, V-261931).
+pg_encryption_of_data_at_rest_required: true

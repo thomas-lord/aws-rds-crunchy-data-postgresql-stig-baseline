@@ -1,22 +1,14 @@
 
-Licensed under the apache-2.0 license, except as noted below.  
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance
+with the License. You may obtain a copy of the License at
 
-Redistribution and use in source and binary forms, with or without modification, 
-are permitted provided that the following conditions are met:
+    http://www.apache.org/licenses/LICENSE-2.0
 
-* Redistributions of source code must retain the above copyright/ digital rights 
-legend, this list of conditions and the following Notice.
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for
+the specific language governing permissions and limitations under the License.
 
-* Redistributions in binary form must reproduce the above copyright copyright/digital 
-rights legend, this list of conditions and the following Notice in the documentation 
-and/or other materials provided with the distribution.
-
-* Neither the name of The MITRE Corporation nor the names of its contributors may be 
-used to endorse or promote products derived from this software without specific prior 
-written permission.
-
-MITRE’s licensed products incorporate third-party materials that are subject to open source or free software licenses (“Open Source Materials”). The Open Source Materials are as follows:
-
-DISA STIGs. Please visit https://public.cyber.mil/stigs/ for full terms of use.
-
-The Open Source Materials are licensed under the terms of the applicable third-party licenses that accompany the Open Source Materials. MITRE’s license does not limit a licensee’s rights under the terms of the Open Source Materials license. MITRE’s license also does not grant licensee rights to the Open Source Materials that supersede the terms and conditions of the Open Source Materials license.
+This profile incorporates requirement text (titles, check text, fix text, severities, CCIs, and STIG/SRG
+identifiers) from DISA STIGs, which are licensed separately. Please visit https://public.cyber.mil/stigs/ for
+full terms of use of that content. Use of DISA STIG content is subject to those terms and is not superseded by
+the Apache-2.0 license covering the InSpec code in this repository.

@@ -1,0 +1,43 @@
+control 'V-261865' do
+  title 'PostgreSQL must initiate session auditing upon startup.'
+  desc 'check', <<~EOT
+    As the database administrator (shown here as "postgres"), check the current settings by running the following SQL: 
+
+    $ sudo su - postgres 
+    $ psql -c "SHOW shared_preload_libraries" 
+
+    If pgaudit is not in the current setting, this is a finding. 
+
+    As the database administrator (shown here as "postgres"), check the current settings by running the following SQL: 
+
+    $ psql -c "SHOW log_destination" 
+
+    If stderr or syslog are not in the current setting, this is a finding.
+  EOT
+  desc 'fix', <<~EOT
+    Configure PostgreSQL to enable auditing.
+
+    To ensure logging is enabled, review supplementary content APPENDIX-C for instructions on enabling logging.
+
+    For session logging, using pgaudit is recommended. For instructions on how to setup pgaudit, refer to supplementary content APPENDIX-B.
+  EOT
+  impact 0.5
+  tag severity: 'medium'
+  tag gtitle: 'SRG-APP-000092-DB-000208'
+  tag gid: 'V-261865'
+  tag rid: 'SV-261865r1000600_rule'
+  tag stig_id: 'CD16-00-000900'
+  tag cci: ["CCI-001464"]
+  tag nist: []
+  sql = postgres_session(input('pg_dba'), input('pg_dba_password'), input('pg_host'), input('pg_port'))
+
+  describe sql.query('SHOW shared_preload_libraries;', [input('pg_db')]) do
+    its('output') { should match(/pgaudit/) }
+  end
+
+  describe sql.query('SHOW pgaudit.log;', [input('pg_db')]) do
+    input('pgaudit_log_items').each do |item|
+      its('output') { should match(/#{item}/) }
+    end
+  end
+end

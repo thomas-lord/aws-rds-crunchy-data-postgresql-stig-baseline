@@ -1,0 +1,39 @@
+control 'V-261885' do
+  title 'The role(s)/group(s) used to modify database structure (including but not necessarily limited to tables, indexes, storage, etc.) and logic modules (stored procedures, functions, triggers, links to software external to PostgreSQL, etc.) must be restricted to authorized users.'
+  desc 'check', <<~EOT
+    Note: The following instructions use the PGDATA environment variable. Refer to APPENDIX-F for instructions on configuring PGDATA.
+
+    As the database administrator (shown here as "postgres"), list all users and their permissions by running the following SQL:
+
+    $ sudo su - postgres
+    $ psql -c "\dp *.*"
+
+    Verify that all objects have the correct privileges. If they do not, this is a finding.
+
+    As the database administrator (shown here as "postgres"), verify the permissions of the database directory on the filesystem:
+
+    $ ls -la ${PGDATA?}
+
+    If permissions of the database directory are not limited to an authorized user account, this is a finding.
+  EOT
+  desc 'fix', <<~EOT
+    As the database administrator, revoke any permissions from a role that are deemed unnecessary by running the following SQL:
+
+    ALTER ROLE bob NOCREATEDB;
+    ALTER ROLE bob NOCREATEROLE;
+    ALTER ROLE bob NOSUPERUSER;
+    ALTER ROLE bob NOINHERIT;
+    REVOKE SELECT ON some_function FROM bob;
+  EOT
+  impact 0.5
+  tag severity: 'medium'
+  tag gtitle: 'SRG-APP-000133-DB-000362'
+  tag gid: 'V-261885'
+  tag rid: 'SV-261885r1000949_rule'
+  tag stig_id: 'CD16-00-003000'
+  tag cci: ["CCI-001499"]
+  tag nist: []
+  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.' do
+    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.'
+  end
+end

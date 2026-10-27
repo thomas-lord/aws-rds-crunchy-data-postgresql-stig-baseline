@@ -1,0 +1,143 @@
+control 'V-261859' do
+  title 'PostgreSQL must enforce approved authorizations for logical access to information and system resources in accordance with applicable access control policies.'
+  desc 'check', <<~EOT
+    Note: The following instructions use the PGDATA environment variable. Refer to APPENDIX-F for instructions on configuring PGDATA.
+
+    From the system security plan or equivalent documentation, determine the appropriate permissions on database objects for each kind (group role) of user. If this documentation is missing, this is a finding.
+
+    As the database administrator (shown here as "postgres"), check the privileges of all roles in the database by running the following SQL:
+
+    $ sudo su - postgres
+    $ psql -c '\du'
+
+    Review all roles and their associated privileges. If any roles' privileges exceed those documented, this is a finding.
+
+    As the database administrator (shown here as "postgres"), check the configured privileges for tables and columns by running the following SQL:
+
+    $ sudo su - postgres
+    $ psql -c '\dp'
+
+    Review all access privileges and column access privileges list. If any roles' privileges exceed those documented, this is a finding.
+
+    As the database administrator (shown here as "postgres"), check the configured authentication settings in pg_hba.conf:
+
+    $ sudo su - postgres
+    $ cat ${PGDATA?}/pg_hba.conf
+
+    Review all entries and their associated authentication methods. If any entries do not have their documented authentication requirements, this is a finding.
+  EOT
+  desc 'fix', <<~EOT
+    Note: The following instructions use the PGDATA environment variable. Refer to APPENDIX-F for instructions on configuring PGDATA.
+
+    Create and/or maintain documentation of each group role's appropriate permissions on database objects.
+
+    Implement these permissions in the database and remove any permissions that exceed those documented.
+
+    The following are examples of how to use role privileges in PostgreSQL to enforce access controls. For a complete list of privileges, refer to the official documentation: https://www.postgresql.org/docs/current/static/sql-createrole.html. 
+
+    #### Roles Example 1 
+
+    The following example demonstrates how to create an admin role with CREATEDB and CREATEROLE privileges. 
+
+    As the database administrator (shown here as "postgres"), run the following SQL: 
+
+    $ sudo su - postgres 
+
+    $ psql -c "CREATE ROLE admin WITH CREATEDB CREATEROLE" 
+
+    #### Roles Example 2 
+
+    The following example demonstrates how to create a role with a password that expires and makes the role a member of the "admin" group. 
+
+    As the database administrator (shown here as "postgres"), run the following SQL: 
+
+    $ sudo su - postgres 
+
+    $ psql -c "CREATE ROLE joe LOGIN ENCRYPTED PASSWORD 'stig_2024' VALID UNTIL '2024-09-20' IN ROLE admin" 
+
+    #### Roles Example 3 
+
+    The following demonstrates how to revoke privileges from a role using REVOKE. 
+
+    As the database administrator (shown here as "postgres"), run the following SQL: 
+
+    $ sudo su - postgres 
+
+    $ psql -c "REVOKE admin FROM joe" 
+
+    #### Roles Example 4 
+
+    The following demonstrates how to alter privileges in a role using ALTER. 
+
+    As the database administrator (shown here as "postgres"), run the following SQL: 
+
+    $ sudo su - postgres 
+
+    $ psql -c "ALTER ROLE joe NOLOGIN" 
+
+    The following are examples of how to use grant privileges in PostgreSQL to enforce access controls on objects. For a complete list of privileges, refer to the official documentation: https://www.postgresql.org/docs/current/static/sql-grant.html. 
+
+    #### Grant Example 1 
+
+    The following example demonstrates how to grant INSERT on a table to a role. 
+
+    As the database administrator (shown here as "postgres"), run the following SQL: 
+
+    $ sudo su - postgres 
+
+    $ psql -c "GRANT SELECT ON stig_test TO joe" 
+
+    #### Grant Example 2 
+
+    The following example demonstrates how to grant ALL PRIVILEGES on a table to a role. 
+
+    As the database administrator (shown here as "postgres"), run the following SQL: 
+
+    $ sudo su - postgres 
+
+    $ psql -c "GRANT ALL PRIVILEGES ON stig_test TO joe" 
+
+    #### Grant Example 3 
+
+    The following example demonstrates how to grant a role to a role. 
+
+    As the database administrator (shown here as "postgres"), run the following SQL: 
+
+    $ sudo su - postgres 
+
+    $ psql -c "GRANT admin TO joe" 
+
+    #### Revoke Example 1 
+
+    The following example demonstrates how to revoke access from a role. 
+
+    As the database administrator (shown here as "postgres"), run the following SQL: 
+
+    $ sudo su - postgres 
+
+    $ psql -c "REVOKE admin FROM joe" 
+
+    To change authentication requirements for the database, as the database administrator (shown here as "postgres"), edit pg_hba.conf: 
+
+    $ sudo su - postgres 
+
+    $ vi ${PGDATA?}/pg_hba.conf 
+
+    Edit authentication requirements to the organizational requirements. Refer to the official documentation for the complete list of options for authentication: http://www.postgresql.org/docs/current/static/auth-pg-hba-conf.html. 
+
+    After changes to pg_hba.conf, reload the server: 
+
+    $ sudo systemctl reload postgresql-${PGVER?}
+  EOT
+  impact 0.7
+  tag severity: 'high'
+  tag gtitle: 'SRG-APP-000033-DB-000084'
+  tag gid: 'V-261859'
+  tag rid: 'SV-261859r1137654_rule'
+  tag stig_id: 'CD16-00-000300'
+  tag cci: ["CCI-000213"]
+  tag nist: []
+  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.' do
+    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session against the database.'
+  end
+end

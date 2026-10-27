@@ -1,68 +1,23 @@
 name: aws-rds-crunchy-data-postgresql-stig-baseline
-title: aws-rds-crunchy-data-postgresql-stig-baseline
-maintainer: MITRE InSpec Team
-copyright: The MITRE Corporation, 2025
-copyright_email: saf@groups.mitre.org
-summary: "Inspec Validation Profile for AWS RDS hosted Crunchy Data PostgreSQL Security Technical Implementation Guide"
+title: aws-rds-crunchy-data-postgresql-16-stig-baseline
+maintainer: Thomas Lord
+copyright: Booz Allen Hamilton, 2026
+summary: "InSpec Validation Profile for AWS RDS hosted Crunchy Data Postgres 16 Security Technical Implementation Guide (STIG)"
 license: Apache-2.0
-description: An InSpec Compliance Profile supporting PostgreSQL versions 10-17.
-version: 3.2.0
+description: >
+  A standalone InSpec Compliance Profile that validates the secure configuration of
+  AWS RDS-hosted PostgreSQL 16 (and later) against the DISA "Crunchy Data Postgres 16"
+  STIG, Version 1 Release 3 (V1R3), released 01 Jul 2026. Control titles, check text,
+  and fix text are sourced directly from the published benchmark
+  (https://public.cyber.mil/stigs/, STIG ID: CD_Postgres_16_STIG). This profile does
+  not depend on any third-party InSpec baseline; all controls are implemented directly
+  against this benchmark.
+version: 1.0.0
 inspec_version: ">= 4.0"
 
-depends:
-- name: crunchy-data-postgresql-stig-baseline
-  url: https://github.com/mitre/crunchy-data-postgresql-stig-baseline/archive/main.tar.gz
-  # To pin to specific version, use:
-  # url: https://github.com/mitre/crunchy-data-postgresql-stig-baseline/archive/refs/tags/v1.2.3.tar.gz
-  
 inputs:
-- name: pg_superusers
-  description: "Authorized superuser accounts"
-  type: array
-  value:
-    - "rdsadmin"
-  profile: crunchy-data-postgresql-stig-baseline
-  sensitive: true
-  
-- name: rds_superusers
-  description: "Members of the rds_superusers role"
-  type: array
-  value:
-    - "postgres"
-  profile: crunchy-data-postgresql-stig-baseline
-  sensitive: true
-
-- name: pg_users
-  description: "authorized postgres user accounts"
-  type: array
-  value:
-    - ""
-  sensitive: true
-
-# V-233520, V-233523
-- name: pg_system_resource_users
-  description: "Members that have logical access to information and system resources"
-  type: array
-  value:
-    - ""
-  sensitive: true
-
-- name: pg_owner
-  description: "The system user of the postgres process"
-  type: string
-  value: "postgres"
-  required: true
-  sensitive: false
-
-- name: pg_group
-  description: "The system group of the progress process"
-  type: string
-  value: "postgres"
-  required: true
-  sensitive: true
-
 - name: pg_dba
-  description: "The postgres DBA user to access the test database"
+  description: "The postgres DBA user used to connect to the target database"
   type: string
   value: "postgres"
   required: true
@@ -76,7 +31,7 @@ inputs:
   sensitive: true
 
 - name: pg_host
-  description: "The hostname or IP address used to connect to the database"
+  description: "The hostname or endpoint used to connect to the database"
   type: string
   value: "localhost"
   required: true
@@ -87,5 +42,100 @@ inputs:
   type: numeric
   value: 5432
   required: true
+
+- name: pg_db
+  description: "The database to connect to for running checks"
+  type: string
+  value: "postgres"
+  required: true
+
+- name: pg_superusers
+  description: "Authorized superuser accounts (e.g., AWS RDS 'rdsadmin')"
+  type: array
+  value:
+    - "rdsadmin"
   sensitive: true
 
+- name: pg_max_connections
+  description: "Organization-defined maximum number of concurrent connections (V-261857)"
+  type: numeric
+  value: 100
+
+- name: pg_log_line_prefix
+  description: "Organization-defined log_line_prefix capturing timestamp, user, database, and client (V-261866/867/868/871/922)"
+  type: string
+  value: "%m [%p]: db=%d,user=%u,app=%a,client=%h "
+
+- name: pg_log_connections
+  description: "Expected value of log_connections (V-261866/956/961/964)"
+  type: string
+  value: "on"
+
+- name: pg_log_disconnections
+  description: "Expected value of log_disconnections (V-261866/961/964)"
+  type: string
+  value: "on"
+
+- name: pg_log_hostname
+  description: "Expected value of log_hostname (V-261869)"
+  type: string
+  value: "on"
+
+- name: pg_timezone
+  description: "Organization-defined log_timezone (V-261921)"
+  type: string
+  value: "UTC"
+
+- name: pg_ssl
+  description: "Expected value of ssl (V-261900/928/932/933)"
+  type: string
+  value: "on"
+
+- name: pg_password_encryption
+  description: "Expected value of password_encryption (V-261891)"
+  type: string
+  value: "scram-sha-256"
+
+- name: pg_client_min_messages
+  description: "Expected value of client_min_messages (V-261908/909)"
+  type: string
+  value: "error"
+
+- name: pg_log_file_mode
+  description: "Expected value of log_file_mode (V-261875/879/909)"
+  type: string
+  value: "0600"
+
+- name: pg_tcp_keepalives_idle
+  description: "Organization-defined, nonzero tcp_keepalives_idle (V-261899)"
+  type: string
+  value: "0"
+
+- name: pg_tcp_keepalives_interval
+  description: "Organization-defined, nonzero tcp_keepalives_interval (V-261899)"
+  type: string
+  value: "0"
+
+- name: pg_tcp_keepalives_count
+  description: "Organization-defined, nonzero tcp_keepalives_count (V-261899)"
+  type: string
+  value: "0"
+
+- name: pg_statement_timeout
+  description: "Organization-defined, nonzero statement_timeout (V-261899)"
+  type: string
+  value: "0"
+
+- name: pgaudit_log_items
+  description: "Required pgaudit.log categories (V-261938 and related audit-record-generation controls)"
+  type: array
+  value:
+    - "ddl"
+    - "role"
+    - "read"
+    - "write"
+
+- name: pg_encryption_of_data_at_rest_required
+  description: "Whether the application owner/AO has determined encryption of data at rest is required (V-261901/930/931)"
+  type: boolean
+  value: true
