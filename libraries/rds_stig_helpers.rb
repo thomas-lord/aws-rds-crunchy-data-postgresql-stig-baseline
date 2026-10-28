@@ -35,6 +35,33 @@ module RdsStigHelpers
     end
   end
 
+  # Disk-level encryption at rest (V-261901, V-261930, V-261931). On RDS this is storage
+  # encryption with a KMS key, which covers the data volume, automated backups, snapshots
+  # and read replicas. With pg_require_customer_managed_kms_key set, the key must also be
+  # customer-managed rather than AWS-managed (aws/rds). Without AWS discovery this is a
+  # manual-review skip.
+  def rds_check_storage_encryption(conn)
+    unless conn.aws_available?
+      manual_note = 'RDS storage encryption at rest cannot be checked without AWS CLI discovery (aws_db_instance_identifier + aws CLI); manually verify "Encryption: Enabled" with a KMS key on the instance\'s Configuration tab in the RDS console.'
+      describe manual_note do
+        skip manual_note
+      end
+      return
+    end
+
+    key_id = conn.aws_instance_attr('KmsKeyId')
+    describe "RDS storage encryption at rest (KmsKeyId: #{key_id || 'none'})" do
+      subject { conn.aws_instance_attr('StorageEncrypted') }
+      it { should cmp true }
+    end
+
+    return unless input('pg_require_customer_managed_kms_key')
+    describe "KMS key manager for RDS storage encryption (#{key_id || 'no key'}); CUSTOMER is customer-managed, AWS is AWS-managed" do
+      subject { key_id && conn.kms_key_manager(key_id) }
+      it { should cmp 'CUSTOMER' }
+    end
+  end
+
   PGAUDIT_LOG_CLASSES = %w(read write function role ddl misc misc_set).freeze
 
   # The classes a pgaudit.log value turns on, read the way pgaudit reads it: comma-separated,

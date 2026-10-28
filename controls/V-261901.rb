@@ -44,18 +44,7 @@ control 'V-261901' do
     conn = rds_connection
     sql = conn.sql_session(input('pg_dba_password'))
 
-    # Disk-level encryption: on RDS this is storage encryption with an AWS KMS key,
-    # which covers the data volume, automated backups, snapshots, and read replicas.
-    if conn.aws_available?
-      describe "RDS storage encryption at rest (KmsKeyId: #{conn.aws_instance_attr('KmsKeyId') || 'none'})" do
-        subject { conn.aws_instance_attr('StorageEncrypted') }
-        it { should cmp true }
-      end
-    else
-      describe 'RDS storage encryption at rest cannot be checked without AWS CLI discovery (aws_db_instance_identifier + aws CLI); manually verify "Encryption: Enabled" with a KMS key on the instance\'s Configuration tab in the RDS console.' do
-        skip 'RDS storage encryption at rest cannot be checked without AWS CLI discovery (aws_db_instance_identifier + aws CLI); manually verify "Encryption: Enabled" with a KMS key on the instance\'s Configuration tab in the RDS console.'
-      end
-    end
+    rds_check_storage_encryption(conn)
 
     # In-database encryption: the STIG requires pgcrypto to be *available* (listed in
     # pg_available_extensions), not necessarily installed via CREATE EXTENSION.
