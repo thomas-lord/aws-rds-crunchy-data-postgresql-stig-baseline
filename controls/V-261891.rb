@@ -56,5 +56,22 @@ control 'V-261891' do
     its('output.strip') { should cmp input('pg_password_encryption') }
   end
 
+  # Roles whose stored password isn't a SCRAM-SHA-256 hash, e.g. md5 hashes from before
+  # password_encryption was changed. Roles with no password (IAM-only roles) are left out:
+  # they have nothing stored. RDS doesn't let the master user read pg_shadow, so if access
+  # is denied this part becomes a manual review; any other query error fails the control.
+  stored_passwords = sql.query("SELECT usename FROM pg_shadow WHERE passwd IS NOT NULL AND passwd NOT LIKE 'SCRAM-SHA-256%';", [conn.db])
+  if stored_passwords.output =~ /permission denied/i
+    manual_note = 'This login cannot read pg_shadow (RDS denies it even to the master user), so stored password hashes cannot be checked. Manually confirm every password-authenticated role had its password set or reset while password_encryption was scram-sha-256, or set rds.accepted_password_auth_method to scram so roles with older hashes cannot log in.'
+    describe manual_note do
+      skip manual_note
+    end
+  else
+    describe 'Roles with a stored password that is not a SCRAM-SHA-256 hash' do
+      subject { stored_passwords.output }
+      it { should be_empty }
+    end
+  end
+
   rds_check_parameter_apply_status(conn)
 end

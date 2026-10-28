@@ -36,14 +36,24 @@ control 'V-261892' do
   tag stig_id: 'CD16-00-003900'
   tag cci: ["CCI-000197"]
   tag nist: ["IA-5 (1) (c)"]
-  # AWS RDS PostgreSQL does not expose pg_hba.conf directly; the RDS-specific parameter
-  # 'rds.force_ssl' enforces encrypted connections for all clients when enabled, which is
-  # the RDS equivalent of ensuring no 'password'/'md5' plaintext-adjacent auth methods are
-  # reachable over an unencrypted channel.
+  # RDS doesn't expose pg_hba.conf. Its equivalent of "no password or md5 entries" is the
+  # rds.accepted_password_auth_method parameter: 'scram' rejects every password method except
+  # SCRAM-SHA-256 (the default, 'md5+scram', still accepts md5). password_encryption must also
+  # be scram-sha-256, or new passwords get md5 hashes and those roles can no longer log in.
   conn = rds_connection
   sql = conn.sql_session(input('pg_dba_password'))
 
-  describe sql.query("SHOW rds.force_ssl;", [conn.db]) do
+  describe sql.query('SHOW rds.accepted_password_auth_method;', [conn.db]) do
+    its('output.strip') { should cmp 'scram' }
+  end
+
+  describe sql.query('SHOW password_encryption;', [conn.db]) do
+    its('output.strip') { should cmp input('pg_password_encryption') }
+  end
+
+  # rds.force_ssl encrypts the whole connection, so even the SCRAM exchange never crosses the
+  # network in the clear.
+  describe sql.query('SHOW rds.force_ssl;', [conn.db]) do
     its('output.strip') { should cmp '1' }
   end
 
