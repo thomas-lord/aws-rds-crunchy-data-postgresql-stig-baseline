@@ -87,6 +87,11 @@ inputs:
   type: array
   value:
     - "rdsadmin"
+
+- name: pg_rds_superusers
+  description: "Roles authorized to hold rds_superuser, directly or through another role, besides the instance's master user (from AWS MasterUsername), which is always allowed (V-261924). Checked only with AWS discovery"
+  type: array
+  value: []
   sensitive: true
 
 - name: pg_max_connections
