@@ -49,7 +49,8 @@ module Inspec::Resources
       attr_reader :instance_cache, :session_cache, :kms_cache
     end
 
-    def initialize(opts = {})
+    # InSpec's registry subclass calls super into this; it must not call super itself.
+    def initialize(opts = {}) # rubocop:disable Lint/MissingSuper
       @aws_instance_id = opts[:aws_instance_id].to_s
       @region = opts[:region].to_s
       @profile = opts[:profile].to_s
@@ -79,6 +80,7 @@ module Inspec::Resources
     # a failed lookup raises rather than falling back to the manual inputs.
     def aws_available?
       return @aws_available if defined?(@aws_available)
+
       @aws_available = !@aws_instance_id.empty? && inspec.command('aws').exist?
     end
 
@@ -150,16 +152,18 @@ module Inspec::Resources
     # CloudWatch alarms on this instance's FreeStorageSpace metric.
     def free_storage_alarms
       return [] unless aws_available?
-      aws_json(%W(cloudwatch describe-alarms-for-metric --namespace AWS/RDS --metric-name FreeStorageSpace
-                  --dimensions Name=DBInstanceIdentifier,Value=#{@aws_instance_id} --query MetricAlarms)) || []
+
+      aws_json(%W[cloudwatch describe-alarms-for-metric --namespace AWS/RDS --metric-name FreeStorageSpace
+                  --dimensions Name=DBInstanceIdentifier,Value=#{@aws_instance_id} --query MetricAlarms]) || []
     end
 
     # Pending maintenance actions for this instance (filtered server-side; the
     # response's ResourceIdentifier is the ARN, not the bare identifier).
     def pending_maintenance_actions
       return [] unless aws_available?
-      aws_json(%W(rds describe-pending-maintenance-actions --filters Name=db-instance-id,Values=#{@aws_instance_id}
-                  --query PendingMaintenanceActions)) || []
+
+      aws_json(%W[rds describe-pending-maintenance-actions --filters Name=db-instance-id,Values=#{@aws_instance_id}
+                  --query PendingMaintenanceActions]) || []
     end
 
     # Who manages a KMS key: "CUSTOMER" for a customer-managed key, "AWS" for an
@@ -169,11 +173,12 @@ module Inspec::Resources
       key = [key_id, @region, @profile]
       cache = AwsRdsConnection.kms_cache
       cache[key] ||= begin
-        { data: aws_json(%W(kms describe-key --key-id #{key_id} --query KeyMetadata.KeyManager)) }
+        { data: aws_json(%W[kms describe-key --key-id #{key_id} --query KeyMetadata.KeyManager]) }
       rescue AwsRdsConnectionError => e
         { error: e.message }
       end
       raise AwsRdsConnectionError, cache[key][:error] if cache[key][:error]
+
       cache[key][:data]
     end
 
@@ -185,6 +190,7 @@ module Inspec::Resources
 
     def aws_attr(*path)
       return nil unless aws_available?
+
       value = describe_instance.dig(*path)
       value.nil? || value == '' ? nil : value
     end
@@ -194,21 +200,24 @@ module Inspec::Resources
     def reaches_port?(perm, db_port)
       protocol = perm['IpProtocol'].to_s
       return true if protocol == '-1'
-      return false unless %w(tcp 6).include?(protocol)
+      return false unless %w[tcp 6].include?(protocol)
+
       perm['FromPort'].to_i <= db_port && db_port <= perm['ToPort'].to_i
     end
 
     def describe_instance
-      key =[@aws_instance_id, @region, @profile]
+      key = [@aws_instance_id, @region, @profile]
       cache = AwsRdsConnection.instance_cache
       cache[key] ||= fetch_instance
       raise AwsRdsConnectionError, cache[key][:error] if cache[key][:error]
+
       cache[key][:data]
     end
 
     def fetch_instance
       data = aws_json(%W(rds describe-db-instances --db-instance-identifier #{@aws_instance_id} --query DBInstances[0]))
       return { error: "Preflight failed: no RDS instance data returned for #{@aws_instance_id}" } unless data.is_a?(Hash)
+
       { data: data }
     rescue AwsRdsConnectionError => e
       { error: "Preflight failed: #{e.message}" }
@@ -226,6 +235,7 @@ module Inspec::Resources
       unless result.exit_status.zero?
         raise AwsRdsConnectionError, "`aws #{args[0, 2].join(' ')}` exited #{result.exit_status}: #{result.stderr.strip}"
       end
+
       JSON.parse(result.stdout)
     rescue JSON::ParserError => e
       raise AwsRdsConnectionError, "could not parse `aws #{args[0, 2].join(' ')}` output: #{e.message}"

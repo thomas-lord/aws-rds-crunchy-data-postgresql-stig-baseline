@@ -106,3 +106,7 @@ DISA publishes this STIG as manual-only (no SCAP content), so SCC can't scan it.
 ## Contributing
 
 Report bugs and feature requests by opening an issue in this repository.
+
+CI runs on every pull request: RuboCop, `inspec check` (no errors or warnings allowed), and a scan of all 111
+controls against a PostgreSQL 16 container that must finish with no control erroring out. Run `rubocop` locally
+before opening a PR.
