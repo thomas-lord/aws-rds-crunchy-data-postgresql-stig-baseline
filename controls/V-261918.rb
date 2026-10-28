@@ -15,18 +15,13 @@ control 'V-261918' do
   tag rid: 'SV-261918r1000759_rule'
   tag stig_id: 'CD16-00-007200'
   tag cci: ["CCI-001849"]
-  tag nist: []
-  aws_ready = command('aws').exist?
-  only_if('The AWS CLI must be installed and configured with credentials, and the aws_db_instance_identifier input must be set, to evaluate this control.') do
-    aws_ready && !input('aws_db_instance_identifier').empty?
-  end
+  tag nist: ["AU-4"]
+  conn = rds_connection
+  rds_only_if_aws(conn)
 
-  region_flag = input('aws_region').empty? ? '' : "--region #{input('aws_region')}"
-  profile_flag = input('aws_cli_profile').empty? ? '' : "--profile #{input('aws_cli_profile')}"
-
-  describe command("aws rds describe-db-instances --db-instance-identifier #{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'DBInstances[0].[AllocatedStorage,MaxAllocatedStorage]' --output text") do
-    its('stdout.split') { should_not be_empty }
-    its('exit_status') { should eq 0 }
+  describe "RDS allocated storage (AllocatedStorage: #{conn.aws_instance_attr('AllocatedStorage')} GiB, MaxAllocatedStorage: #{conn.aws_instance_attr('MaxAllocatedStorage') || 'unset - storage autoscaling disabled'})" do
+    subject { conn.aws_instance_attr('AllocatedStorage') }
+    it { should cmp > 0 }
   end
 
   describe 'Verify (from the AllocatedStorage/MaxAllocatedStorage values reported above) that RDS Storage Autoscaling is configured with headroom sufficient for the organization-defined audit record storage requirement.' do

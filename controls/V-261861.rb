@@ -28,32 +28,22 @@ control 'V-261861' do
   tag rid: 'SV-261861r1000588_rule'
   tag stig_id: 'CD16-00-000500'
   tag cci: ["CCI-000169"]
-  tag nist: []
-  conn = aws_rds_connection(
-    aws_instance_id: input('aws_db_instance_identifier'),
-    region: input('aws_region'),
-    profile: input('aws_cli_profile'),
-    host: input('pg_host'),
-    port: input('pg_port'),
-    db: input('pg_db'),
-    dba: input('pg_dba')
-  )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  tag nist: ["AU-12 a"]
+  conn = rds_connection
+  sql = conn.sql_session(input('pg_dba_password'))
 
   describe sql.query('SHOW shared_preload_libraries;', [conn.db]) do
     its('output') { should match(/pgaudit/) }
   end
 
+  # Read the input outside the describe block: inside one, RSpec treats `input` as an
+  # example-defining method and returns an RSpec::Core::Example, not the value.
+  pgaudit_log_items = input('pgaudit_log_items')
   describe sql.query('SHOW pgaudit.log;', [conn.db]) do
-    input('pgaudit_log_items').each do |item|
+    pgaudit_log_items.each do |item|
       its('output') { should match(/#{item}/) }
     end
   end
 
-  if conn.aws_available?
-    describe 'RDS DB parameter group apply status (flags parameter-group changes not yet applied to the running instance)' do
-      subject { conn.parameter_apply_status }
-      it { should_not cmp 'pending-reboot' }
-    end
-  end
+  rds_check_parameter_apply_status(conn)
 end

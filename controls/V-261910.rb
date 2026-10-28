@@ -34,7 +34,7 @@ control 'V-261910' do
   tag rid: 'SV-261910r1043182_rule'
   tag stig_id: 'CD16-00-006200'
   tag cci: ["CCI-002361"]
-  tag nist: []
+  tag nist: ["AC-12"]
   describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.' do
     skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.'
   end

@@ -35,18 +35,13 @@ control 'V-261858' do
   tag rid: 'SV-261858r1043176_rule'
   tag stig_id: 'CD16-00-000200'
   tag cci: ["CCI-000015"]
-  tag nist: []
-  aws_ready = command('aws').exist?
-  only_if('The AWS CLI must be installed and configured with credentials, and the aws_db_instance_identifier input must be set, to evaluate this control.') do
-    aws_ready && !input('aws_db_instance_identifier').empty?
-  end
+  tag nist: ["AC-2 (1)"]
+  conn = rds_connection
+  rds_only_if_aws(conn)
 
-  region_flag = input('aws_region').empty? ? '' : "--region #{input('aws_region')}"
-  profile_flag = input('aws_cli_profile').empty? ? '' : "--profile #{input('aws_cli_profile')}"
-
-  describe command("aws rds describe-db-instances --db-instance-identifier #{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'DBInstances[0].IAMDatabaseAuthenticationEnabled' --output text") do
-    its('stdout.strip') { should cmp 'True' }
-    its('exit_status') { should eq 0 }
+  describe 'RDS IAM database authentication (IAMDatabaseAuthenticationEnabled)' do
+    subject { conn.aws_instance_attr('IAMDatabaseAuthenticationEnabled') }
+    it { should cmp true }
   end
 
   describe 'If the organization instead uses Kerberos/Active Directory authentication for this instance (DomainMemberships), manually verify that via `aws rds describe-db-instances` rather than IAM database authentication.' do

@@ -28,21 +28,28 @@ control 'V-261931' do
   tag rid: 'SV-261931r1018553_rule'
   tag stig_id: 'CD16-00-008600'
   tag cci: ["CCI-002476"]
-  tag nist: []
+  tag nist: ["SC-28 (1)"]
   if input('pg_encryption_of_data_at_rest_required')
-    conn = aws_rds_connection(
-      aws_instance_id: input('aws_db_instance_identifier'),
-      region: input('aws_region'),
-      profile: input('aws_cli_profile'),
-      host: input('pg_host'),
-      port: input('pg_port'),
-      db: input('pg_db'),
-      dba: input('pg_dba')
-    )
-    sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+    conn = rds_connection
+    sql = conn.sql_session(input('pg_dba_password'))
 
-    describe sql.query("SELECT installed_version FROM pg_available_extensions WHERE name='pgcrypto';", [conn.db]) do
-      its('output.strip') { should_not be_empty }
+    # Disk-level encryption: on RDS this is storage encryption with an AWS KMS key,
+    # which covers the data volume, automated backups, snapshots, and read replicas.
+    if conn.aws_available?
+      describe "RDS storage encryption at rest (KmsKeyId: #{conn.aws_instance_attr('KmsKeyId') || 'none'})" do
+        subject { conn.aws_instance_attr('StorageEncrypted') }
+        it { should cmp true }
+      end
+    else
+      describe 'RDS storage encryption at rest cannot be checked without AWS CLI discovery (aws_db_instance_identifier + aws CLI); manually verify "Encryption: Enabled" with a KMS key on the instance\'s Configuration tab in the RDS console.' do
+        skip 'RDS storage encryption at rest cannot be checked without AWS CLI discovery (aws_db_instance_identifier + aws CLI); manually verify "Encryption: Enabled" with a KMS key on the instance\'s Configuration tab in the RDS console.'
+      end
+    end
+
+    # In-database encryption: the STIG requires pgcrypto to be *available* (listed in
+    # pg_available_extensions), not necessarily installed via CREATE EXTENSION.
+    describe sql.query("SELECT default_version FROM pg_available_extensions WHERE name='pgcrypto';", [conn.db]) do
+      its('output.strip') { should match(/\A\d+(\.\d+)*\z/) }
     end
   else
     describe 'The organization has indicated (via the pg_encryption_of_data_at_rest_required input) that encryption of this data at rest is not required by the application owner/Authorizing Official; this control is Not a Finding.' do

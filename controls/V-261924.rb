@@ -34,20 +34,15 @@ control 'V-261924' do
   tag rid: 'SV-261924r1000777_rule'
   tag stig_id: 'CD16-00-007800'
   tag cci: ["CCI-001813"]
-  tag nist: []
-  conn = aws_rds_connection(
-    aws_instance_id: input('aws_db_instance_identifier'),
-    region: input('aws_region'),
-    profile: input('aws_cli_profile'),
-    host: input('pg_host'),
-    port: input('pg_port'),
-    db: input('pg_db'),
-    dba: input('pg_dba')
-  )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  tag nist: ["CM-5 (1) (a)"]
+  conn = rds_connection
+  sql = conn.sql_session(input('pg_dba_password'))
 
   unauthorized_superusers_sql = "SELECT rolname FROM pg_roles WHERE rolsuper = true;"
+  # RDS always has at least one superuser (rdsadmin), so an empty result means the
+  # query didn't actually run -- don't let `all` pass vacuously over an empty list.
   describe sql.query(unauthorized_superusers_sql, [conn.db]).lines do
+    it { should_not be_empty }
     it { should all(be_in input('pg_superusers')) }
   end
 

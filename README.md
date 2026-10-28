@@ -37,7 +37,7 @@ Of the 111 requirements in V1R3:
 | Manual review required | 34 | Depends on organizational policy, documented procedures, or artifacts (e.g., SSP, PPSM CAL, console configuration) that no tool — SQL or AWS CLI — can resolve on its own |
 | Not Applicable — OS-managed on RDS | 8 | AWS manages the underlying OS, filesystem, and package/binary lifecycle for RDS; `impact 0.0` with justification |
 | Not Applicable — FIPS/kernel-managed on RDS | 3 | No OS/kernel access on RDS to verify FIPS module state; `impact 0.0` with justification |
-| pgcrypto-gated (encryption at rest) | 3 | Verifies `pgcrypto` extension availability when encryption of data at rest is required (input-gated) |
+| Encryption at rest (SQL + AWS CLI) | 3 | When required (input-gated): `aws rds describe-db-instances` confirms `StorageEncrypted` (KMS disk-level encryption), and SQL confirms `pgcrypto` is available in `pg_available_extensions`; the storage check is skipped for manual review if AWS discovery isn't in use (V-261901, V-261930, V-261931) |
 | **AWS CLI: security group exposure** | 2 | `aws ec2 describe-security-groups` on the instance's VPC SGs — flags any `0.0.0.0/0` ingress rule (V-261889, V-261926) |
 | **AWS CLI: CloudWatch Logs export** | 2 | `aws rds describe-db-instances` — confirms `postgresql` is in `EnabledCloudwatchLogsExports` (RDS's equivalent of centralized/syslog logging) (V-261917, V-261967) |
 | Superuser privilege check (SQL) | 1 | Queries `pg_roles` for `rolsuper` and compares against `pg_superusers`; schema/table grant review flagged manual (V-261924) |
@@ -63,19 +63,33 @@ Controls tagged "AWS CLI" above require:
 - The `aws_db_instance_identifier` input set to the RDS **DB instance identifier** (not the connection endpoint).
 - Optionally `aws_region` / `aws_cli_profile` if not relying on the runner's default AWS configuration.
 
-If the AWS CLI isn't installed/configured or `aws_db_instance_identifier` is left blank, these controls are
-skipped (`only_if`) rather than reported as failing, so the profile still runs cleanly SQL-only when AWS access
-isn't available.
+If the AWS CLI isn't installed or `aws_db_instance_identifier` is left blank, these controls are skipped
+(`only_if`) rather than reported as failing, so the profile still runs cleanly SQL-only when AWS access isn't
+available. If the CLI *is* installed and the identifier *is* set, but an AWS call fails (expired credentials,
+missing IAM permission, wrong region), the affected controls **fail** with the AWS error rather than skipping or
+passing — you asked for the AWS checks, so an inability to perform them is surfaced, not hidden.
 
 ### Connection auto-discovery
 
-All SQL-based controls connect via a shared `aws_rds_connection` resource (see `libraries/aws_rds_connection.rb`)
+All SQL- and AWS CLI-based controls connect via a shared `aws_rds_connection` resource (see
+`libraries/aws_rds_connection.rb`, built from the standard inputs by the `rds_connection` helper in
+`libraries/rds_stig_helpers.rb`, alongside the other shared check helpers)
 that resolves `pg_host`, `pg_port`, `pg_db`, and `pg_dba` from `aws rds describe-db-instances`
 (`Endpoint.Address`, `Endpoint.Port`, `DBName`, `MasterUsername`) whenever `aws_db_instance_identifier` is set and
-the AWS CLI is available — the manual `pg_host`/`pg_port`/`pg_db`/`pg_dba` inputs are then only used as a fallback
-(e.g., when connecting through a bastion/different hostname than the RDS endpoint, or without AWS CLI access).
-**`pg_dba_password` is never discoverable this way and must always be supplied manually** — it's a secret the AWS
-API has no way to return.
+the AWS CLI is available — the manual `pg_host`/`pg_port`/`pg_db`/`pg_dba` inputs are then only used when
+discovery isn't in use (identifier blank or no AWS CLI on the runner), or for an individual field AWS leaves
+unset (e.g., `DBName`). **`pg_dba_password` is never discoverable this way and must always be supplied
+manually** — it's a secret the AWS API has no way to return.
+
+### Preflight gate
+
+Before any SQL control queries the database, the same resource runs a one-time `SELECT 1` probe. If it doesn't
+succeed — unreachable host, bad password, missing `psql`, or a failed AWS discovery call — **every SQL-based
+control fails** with a `Preflight failed: ...` message carrying the underlying `psql`/`aws` error. Discovery
+does **not** quietly fall back to the manual inputs when an AWS call fails. This ensures a broken connection can
+never surface as passing results (e.g., an empty query result vacuously satisfying a check). The probe and the
+`describe-db-instances` lookup each run once per scan and their results (including failures) are shared by all
+controls, so a bad password is tried once rather than once per control.
 
 Every SQL-based control that connects this way also adds a secondary check of the DB instance's parameter group
 `ParameterApplyStatus`: if it's `pending-reboot`, the control still reports the true *live* SQL `SHOW` result as
@@ -249,6 +263,10 @@ interactive, graphical view of the InSpec results, if useful during review befor
   "Crunchy Data Postgres 16 Security Technical Implementation Guide", V1R3, 01 Jul 2026.
 - Requirement text (titles, check/fix text, severity, CCI, SRG group, STIG IDs) retrieved programmatically from the
   published benchmark for accuracy; see `controls/*.rb` for the per-control source text.
+- NIST SP 800-53 tags (`tag nist`): derived from each control's CCI via the DISA CCI list
+  (`U_CCI_List.xml`, version 2025-01-23), using the **Revision 5** reference. Four CCIs (CCI-000196, CCI-001812,
+  CCI-001814, CCI-001844) have no Rev 5 mapping in that list; those controls use the Rev 4 reference instead and
+  carry a comment saying so.
 
 ## Contributing and Getting Help
 

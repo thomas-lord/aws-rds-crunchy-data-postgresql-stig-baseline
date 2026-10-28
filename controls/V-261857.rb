@@ -55,27 +55,17 @@ control 'V-261857' do
   tag rid: 'SV-261857r1000976_rule'
   tag stig_id: 'CD16-00-000100'
   tag cci: ["CCI-000054"]
-  tag nist: []
-  conn = aws_rds_connection(
-    aws_instance_id: input('aws_db_instance_identifier'),
-    region: input('aws_region'),
-    profile: input('aws_cli_profile'),
-    host: input('pg_host'),
-    port: input('pg_port'),
-    db: input('pg_db'),
-    dba: input('pg_dba')
-  )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  tag nist: ["AC-10"]
+  conn = rds_connection
+  sql = conn.sql_session(input('pg_dba_password'))
 
-  describe sql.query('SHOW max_connections;', [conn.db]).output.strip.to_i do
-    it { should be <= input('pg_max_connections').to_i }
+  # Assert the value is numeric before comparing: non-numeric output (e.g. an
+  # error message) would otherwise coerce to 0 via to_i and pass the <= check.
+  describe 'SHOW max_connections' do
+    subject { sql.query('SHOW max_connections;', [conn.db]).output.strip }
+    it { should match(/\A\d+\z/) }
+    it { should cmp <= input('pg_max_connections').to_i }
   end
 
-
-  if conn.aws_available?
-    describe 'RDS DB parameter group apply status (flags parameter-group changes not yet applied to the running instance)' do
-      subject { conn.parameter_apply_status }
-      it { should_not cmp 'pending-reboot' }
-    end
-  end
+  rds_check_parameter_apply_status(conn)
 end

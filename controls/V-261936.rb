@@ -34,22 +34,17 @@ control 'V-261936' do
   tag rid: 'SV-261936r1137667_rule'
   tag stig_id: 'CD16-00-009200'
   tag cci: ["CCI-002605"]
-  tag nist: []
-  aws_ready = command('aws').exist?
-  only_if('The AWS CLI must be installed and configured with credentials, and the aws_db_instance_identifier input must be set, to evaluate this control.') do
-    aws_ready && !input('aws_db_instance_identifier').empty?
+  tag nist: ["SI-2 c"]
+  conn = rds_connection
+  rds_only_if_aws(conn)
+
+  describe "RDS engine version #{conn.aws_instance_attr('EngineVersion')} (AutoMinorVersionUpgrade: #{conn.aws_instance_attr('AutoMinorVersionUpgrade')})" do
+    subject { conn.aws_instance_attr('EngineVersion') }
+    it { should_not be_nil }
   end
 
-  region_flag = input('aws_region').empty? ? '' : "--region #{input('aws_region')}"
-  profile_flag = input('aws_cli_profile').empty? ? '' : "--profile #{input('aws_cli_profile')}"
-
-  describe command("aws rds describe-db-instances --db-instance-identifier #{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'DBInstances[0].[EngineVersion,AutoMinorVersionUpgrade]' --output text") do
-    its('exit_status') { should eq 0 }
-  end
-
-  pending_cmd = "aws rds describe-pending-maintenance-actions #{region_flag} #{profile_flag} --query \"PendingMaintenanceActions[?ResourceIdentifier=='#{input('aws_db_instance_identifier')}']\" --output json"
-  describe command(pending_cmd) do
-    its('exit_status') { should eq 0 }
-    its('stdout.strip') { should cmp '[]' }
+  describe 'RDS pending maintenance actions for this instance' do
+    subject { conn.pending_maintenance_actions }
+    it { should be_empty }
   end
 end

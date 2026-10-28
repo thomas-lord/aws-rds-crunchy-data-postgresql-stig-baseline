@@ -40,27 +40,14 @@ control 'V-261891' do
   tag rid: 'SV-261891r1000970_rule'
   tag stig_id: 'CD16-00-003800'
   tag cci: ["CCI-000196"]
-  tag nist: []
-  conn = aws_rds_connection(
-    aws_instance_id: input('aws_db_instance_identifier'),
-    region: input('aws_region'),
-    profile: input('aws_cli_profile'),
-    host: input('pg_host'),
-    port: input('pg_port'),
-    db: input('pg_db'),
-    dba: input('pg_dba')
-  )
-  sql = postgres_session(conn.dba, input('pg_dba_password'), conn.host, conn.port)
+  # CCI-000196 has no NIST SP 800-53 Rev 5 mapping in the DISA CCI list (2025-01-23); Rev 4 reference used.
+  tag nist: ["IA-5 (1) (c)"]
+  conn = rds_connection
+  sql = conn.sql_session(input('pg_dba_password'))
 
   describe sql.query('SHOW password_encryption;', [conn.db]) do
     its('output.strip') { should cmp input('pg_password_encryption') }
   end
 
-
-  if conn.aws_available?
-    describe 'RDS DB parameter group apply status (flags parameter-group changes not yet applied to the running instance)' do
-      subject { conn.parameter_apply_status }
-      it { should_not cmp 'pending-reboot' }
-    end
-  end
+  rds_check_parameter_apply_status(conn)
 end

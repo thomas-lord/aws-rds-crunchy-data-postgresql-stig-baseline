@@ -33,43 +33,17 @@ control 'V-261926' do
   tag rid: 'SV-261926r1000783_rule'
   tag stig_id: 'CD16-00-008000'
   tag cci: ["CCI-001762"]
-  tag nist: []
-  aws_ready = command('aws').exist?
-  only_if('The AWS CLI must be installed and configured with credentials, and the aws_db_instance_identifier input must be set, to evaluate this control.') do
-    aws_ready && !input('aws_db_instance_identifier').empty?
+  tag nist: ["CM-7 (1) (b)"]
+  conn = rds_connection
+  rds_only_if_aws(conn)
+
+  # An RDS instance in a VPC always has at least one security group; an empty list
+  # means the lookup found nothing to check, which must not read as a pass.
+  groups = conn.security_group_ingress
+  describe 'RDS instance VPC security groups' do
+    subject { groups }
+    it { should_not be_empty }
   end
 
-  region_flag = input('aws_region').empty? ? '' : "--region #{input('aws_region')}"
-  profile_flag = input('aws_cli_profile').empty? ? '' : "--profile #{input('aws_cli_profile')}"
-
-  require 'json'
-
-  sg_ids_cmd = "aws rds describe-db-instances --db-instance-identifier #{input('aws_db_instance_identifier')} #{region_flag} #{profile_flag} --query 'DBInstances[0].VpcSecurityGroups[].VpcSecurityGroupId' --output text"
-  sg_ids = command(sg_ids_cmd).stdout.split
-
-  approved_cidrs = input('pg_approved_ingress_cidrs')
-
-  sg_ids.each do |sg_id|
-    perms_cmd = "aws ec2 describe-security-groups --group-ids #{sg_id} #{region_flag} #{profile_flag} --query 'SecurityGroups[0].IpPermissions' --output json"
-    result = command(perms_cmd)
-    ingress_cidrs = []
-    if result.exit_status.zero?
-      begin
-        JSON.parse(result.stdout).each do |perm|
-          (perm['IpRanges'] || []).each { |r| ingress_cidrs << r['CidrIp'] }
-        end
-      rescue JSON::ParserError
-        ingress_cidrs = []
-      end
-    end
-
-    describe "Security group #{sg_id} ingress CIDRs (#{ingress_cidrs.join(', ')})" do
-      it "should not include the public 0.0.0.0/0 range" do
-        expect(ingress_cidrs).not_to include('0.0.0.0/0')
-      end
-      it 'should only include CIDRs approved via the pg_approved_ingress_cidrs input (PPSM CAL / vulnerability assessment)' do
-        expect(ingress_cidrs - approved_cidrs).to be_empty
-      end
-    end
-  end
+  rds_check_security_group_ingress(groups)
 end
