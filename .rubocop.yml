@@ -1,3 +1,73 @@
+AllCops:
+  TargetRubyVersion: 3.1
+  NewCops: enable
+  SuggestExtensions: false
+
+# --- Conventions of an InSpec STIG profile ---
+
+# Control files are named after their STIG Vuln ID (V-261857.rb).
+Naming/FileName:
+  Exclude:
+    - 'controls/**/*'
+
+# desc blocks hold DISA's check/fix text verbatim in <<~EOT heredocs; its long lines and
+# trailing spaces are kept as published.
+Naming/HeredocDelimiterNaming:
+  Enabled: false
+Layout/LineLength:
+  Max: 150
+  AllowedPatterns:
+    - '^\s*(title|desc|tag|describe|skip|it|manual_note|subject) '
+  Exclude:
+    - 'controls/**/*'
+Layout/TrailingWhitespace:
+  AllowInHeredoc: true
+
+# A control is one long block by design.
+Metrics/BlockLength:
+  Exclude:
+    - 'controls/**/*'
+
+# Generated tag lines (tag cci: ["CCI-000054"]) use double quotes.
+Style/StringLiterals:
+  Exclude:
+    - 'controls/**/*'
+
+# Profile code is loaded by InSpec, not required as a gem.
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+# `should cmp > 0` is an InSpec matcher; `cmp.positive?` would break it.
+Style/NumericPredicate:
+  Exclude:
+    - 'controls/**/*'
+
+# InSpec resources are written as `module Inspec::Resources` / `class X < Inspec.resource(1)`.
+Style/ClassAndModuleChildren:
+  Exclude:
+    - 'libraries/**/*'
+Style/Documentation:
+  Enabled: false
+
+# Keep explicit `key: value` hashes; shorthand `{ id: }` needs Ruby 3.1.
+Style/HashSyntax:
+  EnforcedShorthandSyntax: either
+
+# Ceilings for library code, set just above today's largest methods so runaway growth
+# is still flagged.
+Metrics/ClassLength:
+  Max: 200
+Metrics/MethodLength:
+  Max: 20
+Metrics/AbcSize:
+  Max: 40
+Metrics/CyclomaticComplexity:
+  Max: 18
+Metrics/PerceivedComplexity:
+  Max: 18
+
+# --- Existing style choices ---
+
 Style/WordArray:
   Description: 'Use %w or %W for an array of words. (https://rubystyle.guide#percent-w)'
   Enabled : false

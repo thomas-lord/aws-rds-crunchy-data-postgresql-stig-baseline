@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CINC_AUDITOR_IMAGE: cincproject/auditor:7.3.4
+
+jobs:
+  rubocop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - run: gem install rubocop -v 1.65.1 --no-document
+      - run: rubocop
+
+  inspec-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # `check` exits 0 on warnings, so count errors and warnings from its JSON output.
+      - name: inspec check (no errors or warnings)
+        run: |
+          docker run --rm -v "$PWD":/profile:ro "$CINC_AUDITOR_IMAGE" \
+            check /profile --format json --chef-license accept-silent > check.json
+          jq '.summary' check.json
+          jq -r '(.errors + .warnings)[] | "\(.file):\(.line) \(.control_id // "") \(.msg)"' check.json
+          test "$(jq '(.errors | length) + (.warnings | length)' check.json)" -eq 0
+
+  # Runs every control against a real PostgreSQL 16 server (SQL only, no AWS) and fails if
+  # the scan doesn't finish with a report or any control errors out instead of producing
+  # results. Findings are expected: a stock server isn't STIG-configured.
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start PostgreSQL 16
+        run: |
+          docker run -d --name stigpg -e POSTGRES_PASSWORD=ci-password postgres:16
+          PG_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' stigpg)
+          echo "PG_IP=$PG_IP" >> "$GITHUB_ENV"
+          # The image's first-start setup server listens only on a socket, so TCP readiness
+          # means the real server is up.
+          for _ in $(seq 60); do
+            docker exec stigpg pg_isready -q -h "$PG_IP" && exit 0
+            sleep 1
+          done
+          docker logs stigpg
+          exit 1
+      - name: Scan with cinc-auditor
+        run: |
+          mkdir -p out
+          printf "pg_host: '%s'\npg_dba_password: 'ci-password'\n" "$PG_IP" > out/inputs.yml
+          # Exit codes 100/101 mean failed/skipped controls, which are expected here.
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":/profile -v "$PWD/out":/out \
+            "$CINC_AUDITOR_IMAGE" exec /profile -t docker://stigpg --input-file /out/inputs.yml \
+            --reporter json:/out/results.json --chef-license accept-silent || true
+      - name: Check the scan ran every control
+        run: |
+          test -s out/results.json
+          jq -r '[.profiles[].controls[]] | "controls: \(length)"' out/results.json
+          test "$(jq '[.profiles[].controls[]] | length' out/results.json)" -eq 111
+          jq -r '.profiles[].controls[] | select(any(.results[]; .code_desc | contains("Control Source Code Error")))
+                 | "\(.id): \(.results[0].message)"' out/results.json
+          test "$(jq '[.profiles[].controls[] | select(any(.results[]; .code_desc | contains("Control Source Code Error")))] | length' out/results.json)" -eq 0

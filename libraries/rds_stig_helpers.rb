@@ -30,6 +30,7 @@ module RdsStigHelpers
   # live SHOW value is never mistaken for the configured one. No-op without AWS.
   def rds_check_parameter_apply_status(conn)
     return unless conn.aws_available?
+
     describe 'RDS DB parameter group apply status (flags parameter-group changes not yet applied to the running instance)' do
       subject { conn.parameter_apply_status }
       it { should_not cmp 'pending-reboot' }
@@ -57,13 +58,14 @@ module RdsStigHelpers
     end
 
     return unless input('pg_require_customer_managed_kms_key')
+
     describe "KMS key manager for RDS storage encryption (#{key_id || 'no key'}); CUSTOMER is customer-managed, AWS is AWS-managed" do
       subject { key_id && conn.kms_key_manager(key_id) }
       it { should cmp 'CUSTOMER' }
     end
   end
 
-  PGAUDIT_LOG_CLASSES = %w(read write function role ddl misc misc_set).freeze
+  PGAUDIT_LOG_CLASSES = %w[read write function role ddl misc misc_set].freeze
 
   # The classes a pgaudit.log value turns on, read the way pgaudit reads it: comma-separated,
   # case-insensitive, left to right, where 'all' adds every class, 'none' adds nothing, and a
@@ -74,7 +76,7 @@ module RdsStigHelpers
     unknown = []
     value.to_s.split(',').map { |t| t.strip.downcase }.reject(&:empty?).each do |token|
       remove = token.start_with?('-')
-      name = remove ? token[1..-1].strip : token
+      name = remove ? token[1..].strip : token
       classes =
         case name
         when 'all' then PGAUDIT_LOG_CLASSES
@@ -127,7 +129,7 @@ module RdsStigHelpers
       listed = sources + group[:group_refs].map { |ref| "#{ref} (security group)" }
       describe "Security group #{group[:id]} ingress to the database port (#{listed.empty? ? 'none' : listed.join(', ')})" do
         it 'should not be open to the internet (0.0.0.0/0 or ::/0)' do
-          expect(sources & %w(0.0.0.0/0 ::/0)).to be_empty
+          expect(sources & %w[0.0.0.0/0 ::/0]).to be_empty
         end
         it 'should only include CIDRs and prefix lists approved via the pg_approved_ingress_cidrs input (PPSM CAL / vulnerability assessment)' do
           expect(sources - approved_sources).to be_empty
@@ -137,4 +139,6 @@ module RdsStigHelpers
   end
 end
 
-::Inspec::Rule.include(RdsStigHelpers)
+# The leading :: is required: InSpec evaluates library files inside its own context,
+# where a bare `Inspec` doesn't resolve to the top-level module.
+::Inspec::Rule.include(RdsStigHelpers) # rubocop:disable Style/RedundantConstantBase
