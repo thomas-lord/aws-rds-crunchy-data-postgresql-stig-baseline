@@ -125,7 +125,7 @@ inputs:
   value: "on"
 
 - name: pg_password_encryption
-  description: "Expected value of password_encryption (V-261891)"
+  description: "Expected value of password_encryption (V-261891, V-261892)"
   type: string
   value: "scram-sha-256"
 
