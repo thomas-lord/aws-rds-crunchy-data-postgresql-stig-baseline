@@ -51,6 +51,9 @@ pg_dba_password: '<password>'                        # always required; AWS can'
 With the instance ID set, the profile looks up the host, port, database name and master username from AWS. Without
 AWS access, set `pg_host`, `pg_port`, `pg_db` and `pg_dba` yourself.
 
+To reach the database through a bastion host or SSH tunnel, set `pg_host` and `pg_port` to the tunnel's address and
+`pg_use_manual_endpoint: true`. SQL then connects there, while everything else still comes from AWS.
+
 Every other input has a STIG-aligned default. Change one only if your System Security Plan specifies a different
 value. [inputs.yml.example](inputs.yml.example) lists them all, and [inspec.yml](inspec.yml) describes each one.
 
