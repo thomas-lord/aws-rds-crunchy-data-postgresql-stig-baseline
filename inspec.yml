@@ -140,7 +140,7 @@ inputs:
   value: "0600"
 
 - name: pgaudit_log_items
-  description: "Required pgaudit.log categories (V-261938 and related audit-record-generation controls)"
+  description: "pgaudit.log classes that must be enabled (V-261938 and related audit controls). Accepts pgaudit syntax, e.g. [\"all\", \"-misc\"]"
   type: array
   value:
     - "ddl"
