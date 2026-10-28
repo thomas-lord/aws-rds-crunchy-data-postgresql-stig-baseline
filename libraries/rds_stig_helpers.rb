@@ -83,21 +83,26 @@ module RdsStigHelpers
   end
 
   # PPSM exposure check on each of the instance's VPC security groups (V-261889,
-  # V-261926), given conn.security_group_ingress: no 0.0.0.0/0 ingress, and only
-  # CIDRs listed in pg_approved_ingress_cidrs. Callers must also assert the group
+  # V-261926), given conn.security_group_ingress: no 0.0.0.0/0 or ::/0 ingress, and
+  # only sources listed in pg_approved_ingress_cidrs. Callers must also assert the group
   # list is non-empty, in a describe written in the control itself (`inspec
   # check` only counts describe blocks it can see in the control's source).
+  #
+  # Only rules that reach the database port count (see security_group_ingress). Sources are
+  # IPv4/IPv6 CIDRs and prefix-list IDs; rules allowing another security group by reference
+  # are listed in the title but not failed, since they admit only that group's members.
   def rds_check_security_group_ingress(groups)
-    approved_cidrs = input('pg_approved_ingress_cidrs')
+    approved_sources = input('pg_approved_ingress_cidrs')
 
     groups.each do |group|
-      cidrs = group[:cidrs]
-      describe "Security group #{group[:id]} ingress CIDRs (#{cidrs.join(', ')})" do
-        it 'should not include the public 0.0.0.0/0 range' do
-          expect(cidrs).not_to include('0.0.0.0/0')
+      sources = group[:sources]
+      listed = sources + group[:group_refs].map { |ref| "#{ref} (security group)" }
+      describe "Security group #{group[:id]} ingress to the database port (#{listed.empty? ? 'none' : listed.join(', ')})" do
+        it 'should not be open to the internet (0.0.0.0/0 or ::/0)' do
+          expect(sources & %w(0.0.0.0/0 ::/0)).to be_empty
         end
-        it 'should only include CIDRs approved via the pg_approved_ingress_cidrs input (PPSM CAL / vulnerability assessment)' do
-          expect(cidrs - approved_cidrs).to be_empty
+        it 'should only include CIDRs and prefix lists approved via the pg_approved_ingress_cidrs input (PPSM CAL / vulnerability assessment)' do
+          expect(sources - approved_sources).to be_empty
         end
       end
     end
