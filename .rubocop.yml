@@ -57,6 +57,8 @@ Style/HashSyntax:
 # is still flagged.
 Metrics/ClassLength:
   Max: 200
+Metrics/ModuleLength:
+  Max: 150
 Metrics/MethodLength:
   Max: 20
 Metrics/AbcSize:

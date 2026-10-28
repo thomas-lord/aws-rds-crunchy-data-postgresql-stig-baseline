@@ -46,8 +46,9 @@ module Inspec::Resources
     @instance_cache = {}
     @session_cache = {}
     @kms_cache = {}
+    @parameter_cache = {}
     class << self
-      attr_reader :instance_cache, :session_cache, :kms_cache
+      attr_reader :instance_cache, :session_cache, :kms_cache, :parameter_cache
     end
 
     # InSpec's registry subclass calls super into this; it must not call super itself.
@@ -186,6 +187,30 @@ module Inspec::Resources
       raise AwsRdsConnectionError, cache[key][:error] if cache[key][:error]
 
       cache[key][:data]
+    end
+
+    # A setting's value in the instance's DB parameter group, or nil when the group leaves it
+    # unset (or AWS discovery is unavailable). For settings RDS hides from logins without
+    # rds_superuser, such as rds.force_ssl and rds.accepted_password_auth_method, which SHOW
+    # reports as unrecognized. The whole group is read once per scan; raises on failure, e.g.
+    # without rds:DescribeDBParameters permission.
+    def db_parameter(name)
+      groups = aws_attr('DBParameterGroups')
+      group = groups.is_a?(Array) && !groups.empty? ? groups[0]['DBParameterGroupName'] : nil
+      return nil unless group
+
+      key = [group, @region, @profile]
+      cache = AwsRdsConnection.parameter_cache
+      cache[key] ||= begin
+        rows = aws_json(%W[rds describe-db-parameters --db-parameter-group-name #{group}
+                           --query Parameters[].[ParameterName,ParameterValue]]) || []
+        { data: rows.to_h }
+      rescue AwsRdsConnectionError => e
+        { error: e.message }
+      end
+      raise AwsRdsConnectionError, cache[key][:error] if cache[key][:error]
+
+      cache[key][:data][name]
     end
 
     def to_s

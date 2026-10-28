@@ -34,9 +34,9 @@ Install these on the runner host, which needs network access to the RDS instance
 | AWS CLI | AWS checks and connection discovery (optional) | [AWS install guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) |
 | `saf` CLI | Converting results to `.ckl` (optional) | `npm install -g @mitre/saf` |
 
-The AWS credentials need read-only access to `rds:DescribeDBInstances`, `rds:DescribePendingMaintenanceActions`,
-`ec2:DescribeSecurityGroups` and `cloudwatch:DescribeAlarmsForMetric`, plus `kms:DescribeKey` if you set
-`pg_require_customer_managed_kms_key`.
+The AWS credentials need read-only access to `rds:DescribeDBInstances`, `rds:DescribeDBParameters`,
+`rds:DescribePendingMaintenanceActions`, `ec2:DescribeSecurityGroups` and `cloudwatch:DescribeAlarmsForMetric`, plus
+`kms:DescribeKey` if you set `pg_require_customer_managed_kms_key`.
 
 ## Inputs
 
