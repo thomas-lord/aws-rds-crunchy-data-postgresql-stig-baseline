@@ -1,0 +1,227 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Low-cost, single-AZ RDS for PostgreSQL 16 instance for testing the STIG profile.
+  Creates its own VPC, reachable only from AllowedCidr. Not for production:
+  no automated backups, no deletion protection, and deleting the stack deletes
+  the database without a final snapshot.
+
+Parameters:
+  AllowedCidr:
+    Type: String
+    Description: CIDR allowed to reach the database port, e.g. your public IP as a.b.c.d/32.
+    AllowedPattern: '^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$'
+    ConstraintDescription: Must be an IPv4 CIDR such as 203.0.113.10/32.
+  MasterUsername:
+    Type: String
+    Default: stigadmin
+    AllowedPattern: '^[a-zA-Z][a-zA-Z0-9_]{0,62}$'
+  MasterUserPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 128
+    AllowedPattern: '^[^/@" ]+$'
+    ConstraintDescription: 8-128 characters, without /, @, " or spaces.
+  DBName:
+    Type: String
+    Default: stigtest
+    AllowedPattern: '^[a-zA-Z][a-zA-Z0-9_]{0,62}$'
+  EngineVersion:
+    Type: String
+    Default: '16'
+    Description: PostgreSQL 16 version; '16' lets RDS pick the current default minor version.
+    AllowedPattern: '^16(\.\d+)?$'
+  DBInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+    AllowedValues: [db.t4g.micro, db.t4g.small, db.t3.micro, db.t3.small]
+  ApplyStigSettings:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: >-
+      true attaches a parameter group with pgaudit and STIG-aligned logging and
+      authentication settings, and turns on IAM database authentication, PostgreSQL
+      log export to CloudWatch Logs and a free-storage alarm; false uses RDS
+      defaults, so the scan should report findings.
+
+Conditions:
+  UseStigParameters: !Equals [!Ref ApplyStigSettings, 'true']
+
+Resources:
+  # --- Network: a small VPC with two public subnets (RDS needs subnets in two AZs) ---
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.42.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-vpc'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.42.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+
+  SubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.42.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+
+  SubnetARouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SubnetA
+      RouteTableId: !Ref RouteTable
+
+  SubnetBRouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SubnetB
+      RouteTableId: !Ref RouteTable
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub 'Subnets for ${AWS::StackName}'
+      SubnetIds: [!Ref SubnetA, !Ref SubnetB]
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: PostgreSQL from AllowedCidr only
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: !Ref AllowedCidr
+
+  # --- Database ---
+  StigParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Condition: UseStigParameters
+    Properties:
+      Family: postgres16
+      Description: STIG-aligned settings for profile testing
+      Parameters:
+        shared_preload_libraries: pg_stat_statements,pgaudit
+        pgaudit.log: ddl,role,read,write
+        # The rest of the STIG's pgaudit configuration (its default for log_catalog and
+        # log_level already matches; set explicitly so the template is the record).
+        pgaudit.log_catalog: '1'
+        pgaudit.log_level: log
+        pgaudit.log_parameter: '1'
+        pgaudit.log_statement_once: '0'
+        log_connections: '1'
+        log_disconnections: '1'
+        log_hostname: '1'
+        client_min_messages: error
+        password_encryption: scram-sha-256
+        rds.accepted_password_auth_method: scram
+        rds.force_ssl: '1'
+        # RDS allows only this and its default, %t:%r:%u@%d:[%p]:, which lacks the millisecond
+        # timestamp and application name. Matches the profile's pg_log_line_prefix default.
+        log_line_prefix: '%m:%r:%u@%d:[%p]:%l:%e:%s:%v:%x:%c:%q%a:'
+        # Milliseconds; set to organizational requirements.
+        statement_timeout: '60000'
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    Metadata:
+      cfn-lint:
+        config:
+          # A NoEcho parameter keeps this throwaway test stack free of Secrets Manager.
+          ignore_checks: [W1011]
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Engine: postgres
+      EngineVersion: !Ref EngineVersion
+      DBInstanceClass: !Ref DBInstanceClass
+      DBName: !Ref DBName
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      DBParameterGroupName: !If [UseStigParameters, !Ref StigParameterGroup, !Ref 'AWS::NoValue']
+      EnableIAMDatabaseAuthentication: !If [UseStigParameters, true, !Ref 'AWS::NoValue']
+      # RDS creates the /aws/rds/instance/<id>/postgresql log group with no expiry, and it
+      # outlives the stack: delete it after tearing the stack down.
+      EnableCloudwatchLogsExports: !If [UseStigParameters, [postgresql], !Ref 'AWS::NoValue']
+      AllocatedStorage: '20'
+      StorageType: gp3
+      StorageEncrypted: true
+      MultiAZ: false
+      PubliclyAccessible: true
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups: [!Ref DBSecurityGroup]
+      BackupRetentionPeriod: 0
+      DeleteAutomatedBackups: true
+      DeletionProtection: false
+      EnablePerformanceInsights: false
+      MonitoringInterval: 0
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Purpose
+          Value: stig-profile-testing
+
+  # Warns at 75% of the 20 GiB volume used (5 GiB free). Add AlarmActions, such as an SNS
+  # topic, to actually notify support staff.
+  FreeStorageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: UseStigParameters
+    Properties:
+      AlarmDescription: !Sub 'RDS ${Database} free storage below 25 percent'
+      Namespace: AWS/RDS
+      MetricName: FreeStorageSpace
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref Database
+      Statistic: Minimum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5368709120
+      ComparisonOperator: LessThanThreshold
+
+Outputs:
+  DBInstanceIdentifier:
+    Description: Use as aws_db_instance_identifier in inputs.yml.
+    Value: !Ref Database
+  Region:
+    Description: Use as aws_region in inputs.yml.
+    Value: !Ref AWS::Region
+  Endpoint:
+    Value: !GetAtt Database.Endpoint.Address
+  Port:
+    Value: !GetAtt Database.Endpoint.Port
+  DBName:
+    Value: !Ref DBName
+  MasterUsername:
+    Value: !Ref MasterUsername

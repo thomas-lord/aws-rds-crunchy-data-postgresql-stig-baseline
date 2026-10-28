@@ -43,9 +43,9 @@ control 'V-261892' do
   conn = rds_connection
   sql = conn.sql_session(input('pg_dba_password'))
 
-  describe sql.query('SHOW rds.accepted_password_auth_method;', [conn.db]) do
-    its('output.strip') { should cmp 'scram' }
-  end
+  # Both rds.* settings are hidden from logins without rds_superuser (such as an audit
+  # account), so they're read from the parameter group when AWS discovery is on.
+  rds_check_hidden_parameter(conn, sql, 'rds.accepted_password_auth_method', 'scram')
 
   describe sql.query('SHOW password_encryption;', [conn.db]) do
     its('output.strip') { should cmp input('pg_password_encryption') }
@@ -53,9 +53,7 @@ control 'V-261892' do
 
   # rds.force_ssl encrypts the whole connection, so even the SCRAM exchange never crosses the
   # network in the clear.
-  describe sql.query('SHOW rds.force_ssl;', [conn.db]) do
-    its('output.strip') { should cmp '1' }
-  end
+  rds_check_hidden_parameter(conn, sql, 'rds.force_ssl', '1')
 
   rds_check_parameter_apply_status(conn)
 end

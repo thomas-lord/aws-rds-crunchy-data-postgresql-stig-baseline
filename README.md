@@ -34,9 +34,9 @@ Install these on the runner host, which needs network access to the RDS instance
 | AWS CLI | AWS checks and connection discovery (optional) | [AWS install guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) |
 | `saf` CLI | Converting results to `.ckl` (optional) | `npm install -g @mitre/saf` |
 
-The AWS credentials need read-only access to `rds:DescribeDBInstances`, `rds:DescribePendingMaintenanceActions`,
-`ec2:DescribeSecurityGroups` and `cloudwatch:DescribeAlarmsForMetric`, plus `kms:DescribeKey` if you set
-`pg_require_customer_managed_kms_key`.
+The AWS credentials need read-only access to `rds:DescribeDBInstances`, `rds:DescribeDBParameters`,
+`rds:DescribePendingMaintenanceActions`, `ec2:DescribeSecurityGroups` and `cloudwatch:DescribeAlarmsForMetric`, plus
+`kms:DescribeKey` if you set `pg_require_customer_managed_kms_key`.
 
 ## Inputs
 
@@ -91,10 +91,10 @@ log export, alarms, maintenance, IAM auth) call the AWS CLI.
 | Checked by | Controls |
 |---|---|
 | SQL: pgaudit loaded and logging the required classes | 29 |
-| SQL: database settings, superusers, SSL, version | 26 |
+| SQL: database settings, superusers, SSL, version | 24 |
 | AWS CLI: security groups, log export, IAM auth, storage, alarms, maintenance | 8 |
 | AWS CLI + SQL: encryption at rest | 3 |
-| Manual review (needs organizational policy or documents) | 34 |
+| Manual review (needs organizational policy, documents or an IAM review) | 36 |
 | Not applicable on RDS (AWS manages the OS and FIPS) | 11 |
 
 Automated controls also flag any part they can't settle on their own for manual review, such as whether a CIDR is

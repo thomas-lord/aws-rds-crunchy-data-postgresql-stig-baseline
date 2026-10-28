@@ -61,5 +61,9 @@ control 'V-261946' do
 
   rds_check_pgaudit_log(conn, sql)
 
+  describe sql.query('SHOW pgaudit.log_catalog;', [conn.db]) do
+    its('output.strip') { should cmp 'on' }
+  end
+
   rds_check_parameter_apply_status(conn)
 end

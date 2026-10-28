@@ -37,6 +37,33 @@ module RdsStigHelpers
     end
   end
 
+  # Checks a setting RDS hides from logins without rds_superuser, such as rds.force_ssl:
+  # SHOW reports it as unrecognized. With AWS discovery the value comes from the instance's
+  # parameter group (pair this with rds_check_parameter_apply_status); without it, SHOW is
+  # tried, and a hidden setting becomes a manual-review skip.
+  def rds_check_hidden_parameter(conn, sql, name, expected)
+    if conn.aws_available?
+      describe "RDS DB parameter group setting #{name}" do
+        subject { conn.db_parameter(name) }
+        it { should cmp expected }
+      end
+      return
+    end
+
+    result = sql.query("SHOW #{name};", [conn.db])
+    if result.output.include?('unrecognized configuration parameter')
+      manual_note = "#{name} is hidden from #{conn.dba}, which lacks rds_superuser, and AWS CLI discovery is off; manually verify it is #{expected} in the instance's DB parameter group."
+      describe manual_note do
+        skip manual_note
+      end
+      return
+    end
+
+    describe result do
+      its('output.strip') { should cmp expected }
+    end
+  end
+
   # Disk-level encryption at rest (V-261901, V-261930, V-261931). On RDS this is storage
   # encryption with a KMS key, which covers the data volume, automated backups, snapshots
   # and read replicas. With pg_require_customer_managed_kms_key set, the key must also be
