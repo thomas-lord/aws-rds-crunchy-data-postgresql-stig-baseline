@@ -53,6 +53,30 @@ control 'V-261924' do
     it { should all(be_in input('pg_superusers')) }
   end
 
+  # On RDS the master user and anyone granted rds_superuser have nearly superuser powers
+  # without the SUPERUSER flag, so the check above can't see them. Every role holding
+  # rds_superuser, directly or through another role, must be the instance's master user
+  # (created with the instance; RDS always makes it a member) or listed in
+  # pg_rds_superusers. True superusers such as rdsadmin are covered above. The master
+  # user's name comes from AWS (MasterUsername), not from pg_dba, so scanning as another
+  # account can't approve that account by mistake; without AWS discovery this part is a
+  # manual review.
+  if conn.aws_available?
+    rds_superusers_sql = "SELECT r.rolname FROM pg_roles r WHERE pg_has_role(r.oid, 'rds_superuser', 'MEMBER') AND NOT r.rolsuper AND r.rolname <> 'rds_superuser';"
+    approved_rds_superusers = input('pg_rds_superusers') + [conn.aws_instance_attr('MasterUsername')].compact
+    describe "Roles holding rds_superuser (approved: #{approved_rds_superusers.join(', ')})" do
+      subject { sql.query(rds_superusers_sql, [conn.db]).lines }
+      # The master user is always a member, so an empty result means the query didn't run.
+      it { should_not be_empty }
+      it { should all(be_in approved_rds_superusers) }
+    end
+  else
+    manual_note = 'Without AWS CLI discovery (aws_db_instance_identifier + aws CLI) the instance\'s master user cannot be identified, so rds_superuser membership is not checked automatically. Manually confirm that every role holding rds_superuser (directly or through another role) is the master user or is approved by the organization.'
+    describe manual_note do
+      skip manual_note
+    end
+  end
+
   describe 'Manually review database/schema-level privileges (\\l and \\dn+ output) for unauthorized update ("W") or create ("C") grants; this portion cannot be fully automated without an organization-defined authorization matrix.' do
     skip 'Manually review database/schema-level privileges (\\l and \\dn+ output) for unauthorized update ("W") or create ("C") grants; this portion cannot be fully automated without an organization-defined authorization matrix.'
   end
