@@ -1,5 +1,8 @@
 control 'V-261964' do
   title 'PostgreSQL must generate audit records for all direct access to the database(s).'
+  desc <<~EOT
+    In this context, direct access is any query, command, or call to PostgreSQL that comes from any source other than the application(s) that it supports. Examples would be the command line or a database management utility program. The intent is to capture all activity from administrative and nonstandard sources.
+  EOT
   desc 'check', <<~EOT
     As the database administrator, verify pgaudit is enabled by running the following SQL:
 

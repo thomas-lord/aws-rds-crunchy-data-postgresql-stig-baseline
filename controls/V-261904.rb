@@ -1,5 +1,8 @@
 control 'V-261904' do
   title 'Access to database files must be limited to relevant processes and to authorized, administrative users.'
+  desc <<~EOT
+    Applications, including DBMSs, must prevent unauthorized and unintended information transfer via shared system resources. Permitting only PostgreSQL processes and authorized, administrative users to have access to the files where the database resides helps ensure that those files are not shared inappropriately and are not open to backdoor access and manipulation.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGDATA environment variable. Refer to APPENDIX-F for instructions on configuring PGDATA.
 

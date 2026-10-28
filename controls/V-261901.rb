@@ -1,5 +1,12 @@
 control 'V-261901' do
   title 'PostgreSQL must protect the confidentiality and integrity of all information at rest.'
+  desc <<~EOT
+    This control is intended to address the confidentiality and integrity of information at rest in nonmobile devices and covers user information and system information. Information at rest refers to the state of information when it is located on a secondary storage device (e.g., disk drive, tape drive) within an organizational information system. Applications and application users generate information throughout the course of their application use.
+
+    User data generated, as well as application-specific configuration data, needs to be protected. Organizations may choose to employ different mechanisms to achieve confidentiality and integrity protections, as appropriate.
+
+    If the confidentiality and integrity of application data is not protected, the data will be open to compromise and unauthorized modification.
+  EOT
   desc 'check', <<~EOT
     If the application owner and Authorizing Official (AO) have determined that encryption of data at rest is NOT required, this is not a finding.
 

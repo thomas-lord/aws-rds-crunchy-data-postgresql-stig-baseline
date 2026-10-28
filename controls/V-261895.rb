@@ -1,5 +1,8 @@
 control 'V-261895' do
   title 'PostgreSQL must map the PKI-authenticated identity to an associated user account.'
+  desc <<~EOT
+    The DOD standard for authentication is DOD-approved PKI certificates. Once a PKI certificate has been validated, it must be mapped to a PostgreSQL user account for the authenticated identity to be meaningful to PostgreSQL and useful for authorization decisions.
+  EOT
   desc 'check', <<~EOT
     The Common Name (cn) attribute of the certificate will be compared to the requested database username and, if they match, the login will be allowed.
 

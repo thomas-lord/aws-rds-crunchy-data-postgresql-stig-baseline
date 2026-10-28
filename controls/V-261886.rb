@@ -1,5 +1,12 @@
 control 'V-261886' do
   title 'Unused database components, PostgreSQL software, and database objects must be removed.'
+  desc <<~EOT
+    Information systems are capable of providing a wide variety of functions and services. Some of the functions and services, provided by default, may not be necessary to support essential organizational operations (e.g., key missions, functions).
+
+    It is detrimental for software products to provide, or install by default, functionality exceeding requirements or mission objectives. 
+
+    PostgreSQL must adhere to the principles of least functionality by providing only essential capabilities.
+  EOT
   desc 'check', <<~EOT
     To get a list of all extensions installed, use the following commands:
 

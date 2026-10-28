@@ -1,5 +1,15 @@
 control 'V-261962' do
   title 'PostgreSQL must be able to generate audit records when successful accesses to objects occur.'
+  desc <<~EOT
+    Without tracking all or selected types of access to all or selected objects (tables, views, procedures, functions, etc.), it would be difficult to establish, correlate, and investigate the events relating to an incident, or identify those responsible for one.
+
+    In an SQL environment, types of access include, but are not necessarily limited to:
+    SELECT
+    INSERT
+    UPDATE
+    DELETE
+    EXECUTE
+  EOT
   desc 'check', <<~EOT
     As the database administrator, verify pgaudit is enabled by running the following SQL: 
 

@@ -1,5 +1,12 @@
 control 'V-261881' do
   title 'PostgreSQL must limit privileges to change software modules, to include stored procedures, functions and triggers, and links to software external to PostgreSQL.'
+  desc <<~EOT
+    If the system were to allow any user to make changes to software libraries, then those changes might be implemented without undergoing the appropriate testing and approvals that are part of a robust change management process.
+
+    Accordingly, only qualified and authorized individuals must be allowed to obtain access to information system components for purposes of initiating changes, including upgrades and modifications.
+
+    Unmanaged changes that occur to the database software libraries or configuration can lead to unauthorized or compromised installations.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGDATA and PGVER environment variables. Refer to APPENDIX-F for instructions on configuring PGDATA and APPENDIX-H for PGVER.
 

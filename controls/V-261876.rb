@@ -1,5 +1,18 @@
 control 'V-261876' do
   title 'The audit information produced by PostgreSQL must be protected from unauthorized modification.'
+  desc <<~EOT
+    If audit data were to become compromised, competent forensic analysis and discovery of the true source of potentially malicious system activity would be impossible to achieve. 
+
+    To ensure the veracity of audit data, the information system and/or the application must protect audit information from unauthorized modification. 
+
+    This requirement can be achieved through multiple methods depending on system architecture and design. Some commonly employed methods include ensuring log files have the proper file system permissions and limiting log data locations. 
+
+    Applications providing a user interface to audit data will leverage user permissions and roles identifying the user accessing the data and the user's corresponding rights to make access decisions regarding the modification of audit data.
+
+    Audit information includes all information (e.g., audit records, audit settings, and audit reports) needed to successfully audit information system activity. 
+
+    Modification of database audit data could mask the theft or unauthorized modification of sensitive data stored in the database.
+  EOT
   desc 'check', <<~EOT
     Review locations of audit logs, both internal to the database and database audit logs located at the operating system level. 
 

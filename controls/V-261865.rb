@@ -1,5 +1,8 @@
 control 'V-261865' do
   title 'PostgreSQL must initiate session auditing upon startup.'
+  desc <<~EOT
+    Session auditing is for use when a user's activities are under investigation. To ensure the capture of all activity during those periods when session auditing is in use, it needs to be in operation for the whole time PostgreSQL is running.
+  EOT
   desc 'check', <<~EOT
     As the database administrator (shown here as "postgres"), check the current settings by running the following SQL: 
 

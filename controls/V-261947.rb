@@ -1,5 +1,10 @@
 control 'V-261947' do
   title 'PostgreSQL must generate audit records when unsuccessful attempts to modify security objects occur.'
+  desc <<~EOT
+    Changes in the database objects (tables, views, procedures, functions) that record and control permissions, privileges, and roles granted to users and roles must be tracked. Without an audit trail, unauthorized changes to the security subsystem could go undetected. The database could be severely compromised or rendered inoperative.
+
+    To aid in diagnosis, it is necessary to keep track of failed attempts in addition to the successful ones.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGDATA and PGLOG environment variables. Refer to APPENDIX-F for instructions on configuring PGDATA and APPENDIX-I for PGLOG.
 

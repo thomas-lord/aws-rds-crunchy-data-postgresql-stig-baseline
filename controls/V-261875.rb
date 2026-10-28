@@ -1,5 +1,16 @@
 control 'V-261875' do
   title 'The audit information produced by PostgreSQL must be protected from unauthorized read access.'
+  desc <<~EOT
+    If audit data were to become compromised, then competent forensic analysis and discovery of the true source of potentially malicious system activity is difficult, if not impossible, to achieve. In addition, access to audit records provides information an attacker could potentially use to their advantage.
+
+    To ensure the veracity of audit data, the information system and/or the application must protect audit information from any and all unauthorized access. This includes read, write, copy, etc.
+
+    This requirement can be achieved through multiple methods which will depend upon system architecture and design. Some commonly employed methods include ensuring log files enjoy the proper file system permissions using file system protections and limiting log data location. 
+
+    Additionally, applications with user interfaces to audit records should not allow for the unfettered manipulation of or access to those records via the application. If the application provides access to the audit data, the application becomes accountable for ensuring that audit information is protected from unauthorized access.
+
+    Audit information includes all information (e.g., audit records, audit settings, and audit reports) needed to successfully audit information system activity.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGLOG environment variable. Refer to supplementary content APPENDIX-I for instructions on configuring PGLOG.
 

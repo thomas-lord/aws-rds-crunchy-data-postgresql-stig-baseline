@@ -1,5 +1,12 @@
 control 'V-261860' do
   title 'PostgreSQL must protect against a user falsely repudiating having performed organization-defined actions.'
+  desc <<~EOT
+    Nonrepudiation of actions taken is required to maintain data integrity. Examples of particular actions taken by individuals include creating information, sending a message, approving information (e.g., indicating concurrence or signing a contract), and receiving a message. 
+
+    Nonrepudiation protects against later claims by a user of not having created, modified, or deleted a particular data item or collection of data in the database.
+
+    In designing a database, the organization must define the types of data and the user actions that must be protected from repudiation. The implementation must then include building audit features into the application data tables and configuring PostgreSQL audit tools to capture the necessary audit trail. Design and implementation must ensure that applications pass individual user identification to PostgreSQL, even where the application connects to PostgreSQL with a standard, shared account.
+  EOT
   desc 'check', <<~EOT
     As the database administrator, review the current log_line_prefix settings by running the following SQL: 
 

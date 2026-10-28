@@ -1,5 +1,19 @@
 control 'V-261939' do
   title 'PostgreSQL must generate audit records when unsuccessful attempts to access security objects occur.'
+  desc <<~EOT
+    Changes to the security configuration must be tracked.
+
+    This requirement applies to situations where security data is retrieved or modified via data manipulation operations, as opposed to via specialized security functionality.
+
+    In an SQL environment, types of access include, but are not limited to:
+    SELECT
+    INSERT
+    UPDATE
+    DELETE
+    EXECUTE
+
+    To aid in diagnosis, it is necessary to keep track of failed attempts in addition to the successful ones.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGDATA and PGLOG environment variables. Refer to APPENDIX-F for instructions on configuring PGDATA and APPENDIX-I for PGLOG.
 

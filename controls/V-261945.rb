@@ -1,5 +1,12 @@
 control 'V-261945' do
   title 'PostgreSQL must generate audit records when unsuccessful attempts to modify privileges/permissions occur.'
+  desc <<~EOT
+    Failed attempts to change the permissions, privileges, and roles granted to users and roles must be tracked. Without an audit trail, unauthorized attempts to elevate or restrict privileges could go undetected. 
+
+    In an SQL environment, modifying permissions is typically done via the GRANT, REVOKE, and DENY commands. 
+
+    To aid in diagnosis, it is necessary to keep track of failed attempts in addition to the successful ones.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGDATA and PGLOG environment variables. Refer to APPENDIX-F for instructions on configuring PGDATA and APPENDIX-I for PGLOG.
 

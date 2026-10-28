@@ -1,5 +1,8 @@
 control 'V-261957' do
   title 'PostgreSQL must generate audit records when unsuccessful logons or connection attempts occur.'
+  desc <<~EOT
+    For completeness of forensic analysis, it is necessary to track failed attempts to log on to PostgreSQL. While positive identification may not be possible in a case of failed authentication, as much information as possible about the incident must be captured.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGDATA and PGLOG environment variables. Refer to APPENDIX-F for instructions on configuring PGDATA and APPENDIX-I on PGLOG.
 

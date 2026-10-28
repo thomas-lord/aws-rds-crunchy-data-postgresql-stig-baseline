@@ -1,5 +1,14 @@
 control 'V-261892' do
   title 'If passwords are used for authentication, PostgreSQL must transmit only encrypted representations of passwords.'
+  desc <<~EOT
+    The DOD standard for authentication is DOD-approved PKI certificates.
+
+    Authentication based on User ID and Password may be used only when it is not possible to employ a PKI certificate, and requires Authorizing Official (AO) approval.
+
+    In such cases, passwords need to be protected at all times, and encryption is the standard method for protecting passwords during transmission.
+
+    PostgreSQL passwords sent in clear text format across the network are vulnerable to discovery by unauthorized users. Disclosure of passwords may easily lead to unauthorized access to the database.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGDATA environment variable. Refer to APPENDIX-F for instructions on configuring PGDATA.
 

@@ -1,5 +1,10 @@
 control 'V-261871' do
   title 'PostgreSQL must produce audit records containing sufficient information to establish the identity of any user/subject or process associated with the event.'
+  desc <<~EOT
+    Information system auditing capability is critical for accurate forensic analysis. Without information that establishes the identity of the subjects (i.e., users or processes acting on behalf of users) associated with the events, security personnel cannot determine responsibility for the potentially harmful event.
+
+    Identifiers (if authenticated or otherwise known) include, but are not limited to, user database tables, primary key values, usernames, or process identifiers.
+  EOT
   desc 'check', <<~EOT
     Check PostgreSQL settings and existing audit records to verify a username associated with the event is being captured and stored with the audit records. If audit records exist without specific user information, this is a finding.
 

@@ -1,5 +1,12 @@
 control 'V-261893' do
   title 'PostgreSQL, when using PKI-based authentication, must validate certificates by performing RFC 5280-compliant certification path validation.'
+  desc <<~EOT
+    The DOD standard for authentication is DOD-approved PKI certificates.
+
+    A certificate's certification path is the path from the end entity certificate to a trusted root certification authority (CA). Certification path validation is necessary for a relying party to make an informed decision regarding acceptance of an end entity certificate. Certification path validation includes checks such as certificate issuer trust, time validity and revocation status for each certificate in the certification path. Revocation status information for CA and subject certificates in a certification path is commonly provided via certificate revocation lists (CRLs) or online certificate status protocol (OCSP) responses.
+
+    Database Management Systems that do not validate certificates by performing RFC 5280-compliant certification path validation are in danger of accepting certificates that are invalid and/or counterfeit. This could allow unauthorized access to the database.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGDATA environment variable. Refer to APPENDIX-F for instructions on configuring PGDATA.
 

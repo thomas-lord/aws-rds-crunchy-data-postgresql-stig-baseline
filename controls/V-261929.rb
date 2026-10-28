@@ -1,5 +1,12 @@
 control 'V-261929' do
   title 'PostgreSQL must only accept end entity certificates issued by DOD PKI or DOD-approved PKI Certification Authorities (CAs) for the establishment of all encrypted sessions.'
+  desc <<~EOT
+    Only DOD-approved external PKIs have been evaluated to ensure that they have security controls and identity vetting procedures in place which are sufficient for DOD systems to rely on the identity asserted in the certificate. PKIs lacking sufficient security controls and identity vetting procedures risk being compromised and issuing certificates that enable adversaries to impersonate legitimate users.
+
+    The authoritative list of DOD-approved PKIs is published at https://public.cyber.mil/pki-pke/interoperability/.
+
+    This requirement focuses on communications protection for the PostgreSQL session rather than for the network packet.
+  EOT
   desc 'check', <<~EOT
     As the database administrator (shown here as "postgres"), verify the following setting in postgresql.conf:
 

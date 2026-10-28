@@ -1,5 +1,14 @@
 control 'V-261867' do
   title 'PostgreSQL must produce audit records containing time stamps to establish when the events occurred.'
+  desc <<~EOT
+    Information system auditing capability is critical for accurate forensic analysis. Without establishing when events occurred, it is impossible to establish, correlate, and investigate the events relating to an incident.
+
+    To compile an accurate risk assessment and provide forensic analysis, it is essential for security personnel to know the date and time when events occurred.
+
+    Associating the date and time with detected events in the application and audit logs provides a means of investigating an attack; recognizing resource utilization or capacity thresholds; or identifying an improperly configured application.
+
+    PostgreSQL is capable of a range of actions on data stored within the database. It is important, for accurate forensic analysis, to know exactly when specific actions were performed. This requires the date and time an audit record is referring to. If date and time information is not recorded and stored with the audit record, the record itself is of very limited use.
+  EOT
   desc 'check', <<~EOT
     As the database administrator (usually postgres), run the following SQL:
 

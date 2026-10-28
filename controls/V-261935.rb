@@ -1,5 +1,12 @@
 control 'V-261935' do
   title 'When updates are applied to the PostgreSQL software, any software components that have been replaced or made unnecessary must be removed.'
+  desc <<~EOT
+    Previous versions of PostgreSQL components that are not removed from the information system after updates have been installed may be exploited by adversaries.
+
+    Some DBMSs' installation tools may remove older versions of software automatically from the information system. In other cases, manual review and removal will be required. In planning installations and upgrades, organizations must include steps (automated, manual, or both) to identify and remove the outdated modules.
+
+    A transition period may be necessary when both the old and the new software are required. This should be taken into account in the planning.
+  EOT
   desc 'check', <<~EOT
     To check software installed by packages, as the system administrator, run the following command:
 
