@@ -159,6 +159,6 @@ inputs:
   value: 75
 
 - name: pg_approved_ingress_cidrs
-  description: "CIDR blocks approved by the organization's PPSM CAL/vulnerability assessment to reach the database port (V-261889/V-261926); an open 0.0.0.0/0 rule not in this list is a finding"
+  description: "IPv4/IPv6 CIDR blocks and prefix-list IDs approved by the organization's PPSM CAL/vulnerability assessment to reach the database port (V-261889/V-261926). Any other source is a finding; 0.0.0.0/0 and ::/0 are always a finding"
   type: array
   value: []

@@ -125,14 +125,24 @@ module Inspec::Resources
     # findings". Each returns [] when AWS discovery isn't in use: a control skipped
     # by only_if still evaluates its body, which must not shell out to a missing CLI.
 
-    # [{ id:, cidrs: [...] }] for each VPC security group attached to the instance.
-    # Only IPv4 ranges (IpRanges) are collected, matching the original checks.
+    # Ingress that can reach the database port, for each VPC security group attached to the
+    # instance: [{ id:, sources: [...], group_refs: [...] }]. A rule counts when it allows all
+    # traffic or TCP on a port range that includes the instance's port; rules for other ports
+    # can't reach the database. sources are IPv4 CIDRs, IPv6 CIDRs and prefix-list IDs;
+    # group_refs are security groups the rules allow by reference.
     def security_group_ingress
+      db_port = port.to_i
       ids = (aws_attr('VpcSecurityGroups') || []).map { |g| g['VpcSecurityGroupId'] }.compact
       ids.map do |id|
-        perms = aws_json(%W(ec2 describe-security-groups --group-ids #{id} --query SecurityGroups[0].IpPermissions))
-        cidrs = (perms || []).flat_map { |p| (p['IpRanges'] || []).map { |r| r['CidrIp'] } }
-        { id: id, cidrs: cidrs }
+        perms = aws_json(%W(ec2 describe-security-groups --group-ids #{id} --query SecurityGroups[0].IpPermissions)) || []
+        reaching = perms.select { |p| reaches_port?(p, db_port) }
+        sources = reaching.flat_map do |p|
+          (p['IpRanges'] || []).map { |r| r['CidrIp'] } +
+            (p['Ipv6Ranges'] || []).map { |r| r['CidrIpv6'] } +
+            (p['PrefixListIds'] || []).map { |r| r['PrefixListId'] }
+        end
+        group_refs = reaching.flat_map { |p| (p['UserIdGroupPairs'] || []).map { |g| g['GroupId'] } }
+        { id: id, sources: sources.compact.uniq, group_refs: group_refs.compact.uniq }
       end
     end
 
@@ -163,8 +173,17 @@ module Inspec::Resources
       value.nil? || value == '' ? nil : value
     end
 
+    # Whether a security-group ingress rule (one IpPermissions entry) admits traffic to db_port:
+    # protocol -1 means all traffic; otherwise it must be TCP with db_port in FromPort..ToPort.
+    def reaches_port?(perm, db_port)
+      protocol = perm['IpProtocol'].to_s
+      return true if protocol == '-1'
+      return false unless %w(tcp 6).include?(protocol)
+      perm['FromPort'].to_i <= db_port && db_port <= perm['ToPort'].to_i
+    end
+
     def describe_instance
-      key = [@aws_instance_id, @region, @profile]
+      key =[@aws_instance_id, @region, @profile]
       cache = AwsRdsConnection.instance_cache
       cache[key] ||= fetch_instance
       raise AwsRdsConnectionError, cache[key][:error] if cache[key][:error]
