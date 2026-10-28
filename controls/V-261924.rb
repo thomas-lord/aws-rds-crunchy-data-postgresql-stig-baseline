@@ -58,7 +58,7 @@ control 'V-261924' do
   # rds_superuser, directly or through another role, must be the instance's master user
   # (created with the instance; RDS always makes it a member) or listed in
   # pg_rds_superusers. True superusers such as rdsadmin are covered above. The master
-  # user's name comes from AWS (MasterUsername), not from pg_dba, so scanning as another
+  # user's name comes from AWS (MasterUsername), not from pg_dba_user, so scanning as another
   # account can't approve that account by mistake; without AWS discovery this part is a
   # manual review.
   if conn.aws_available?
