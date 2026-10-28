@@ -19,12 +19,12 @@
 # endpoint, port and database name are looked up automatically via
 # `aws rds describe-db-instances` -- you don't need to type them in below.
 aws_db_instance_identifier: '<rds-db-instance-id>'
-aws_region: 'us-east-1'
+aws_region: '<region>'
 
 # Always required: the account the scan logs in as (never discovered), and its
 # password. Use a dedicated audit account granted pg_read_all_settings rather
 # than the master user -- see "Audit account" in the README.
-pg_dba_user: 'stig_audit'
+pg_dba_user: '<dba-user-account>'
 pg_dba_password: '<password>'
 
 # --- Manual connection fallback ---

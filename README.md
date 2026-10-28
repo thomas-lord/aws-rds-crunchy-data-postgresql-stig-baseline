@@ -44,8 +44,8 @@ Usually only these are needed:
 
 ```yaml
 aws_db_instance_identifier: '<rds-db-instance-id>'   # the instance ID, not the endpoint
-aws_region: 'us-east-1'
-pg_dba_user: 'stig_audit'                            # the account the scan logs in as
+aws_region: '<region>'
+pg_dba_user: '<dba-user-account>'                    # the account the scan logs in as
 pg_dba_password: '<password>'                        # always required; AWS can't return it
 ```
 
