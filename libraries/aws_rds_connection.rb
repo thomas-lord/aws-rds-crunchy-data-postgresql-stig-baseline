@@ -5,9 +5,10 @@ require 'shellwords'
 # instance via the AWS CLI (`aws rds describe-db-instances`) when an instance
 # identifier is configured, falling back to the manually supplied inputs otherwise.
 #
-# This does not replace the pg_host/pg_port/pg_db/pg_dba inputs; it layers AWS
-# discovery on top of them so that only `pg_dba_password` (a secret the AWS API
-# cannot provide) must always be supplied manually.
+# This does not replace the pg_host/pg_port/pg_db inputs; it layers AWS discovery
+# on top of them. The login account (pg_dba_user) and its password are always the
+# manual inputs, never discovered, so the scan can run as a read-only audit account
+# rather than the master user.
 #
 # It also acts as the profile's preflight gate: `sql_session` verifies the SQL
 # session actually works before any control queries it, and an AWS lookup that
@@ -20,7 +21,7 @@ module Inspec::Resources
 
   class AwsRdsConnection < Inspec.resource(1)
     name 'aws_rds_connection'
-    desc 'Resolves RDS PostgreSQL connection details (host/port/db/master user), preferring AWS CLI discovery over manual inputs, and verifies the SQL session before use.'
+    desc 'Resolves RDS PostgreSQL connection details (host/port/db), preferring AWS CLI discovery over manual inputs, and verifies the SQL session before use.'
     example <<~EXAMPLE
       conn = aws_rds_connection(
         aws_instance_id: input('aws_db_instance_identifier'),
@@ -29,7 +30,7 @@ module Inspec::Resources
         host: input('pg_host'),
         port: input('pg_port'),
         db: input('pg_db'),
-        dba: input('pg_dba')
+        dba: input('pg_dba_user')
       )
       sql = conn.sql_session(input('pg_dba_password'))
     EXAMPLE
@@ -63,7 +64,7 @@ module Inspec::Resources
 
     # With use_manual_endpoint (e.g. reaching the instance through a bastion or SSH
     # tunnel), SQL connects to the manual host/port even when AWS discovery is in use;
-    # db, dba and every AWS check still come from discovery.
+    # db and every AWS check still come from discovery.
     def host
       return @manual_host if @use_manual_endpoint
 
@@ -80,8 +81,10 @@ module Inspec::Resources
       aws_attr('DBName') || @manual_db
     end
 
+    # The account the scan logs in as: always pg_dba_user, never the discovered master
+    # user, so the scan can use a dedicated audit account.
     def dba
-      aws_attr('MasterUsername') || @manual_dba
+      @manual_dba
     end
 
     # Whether AWS CLI discovery is in use (CLI present, instance ID set). When true,
@@ -106,27 +109,21 @@ module Inspec::Resources
       groups.is_a?(Array) && !groups.empty? ? groups[0]['ParameterApplyStatus'] : nil
     end
 
+    # Returns 1 when the login has pg_read_all_settings, without which settings such as
+    # shared_preload_libraries can't be read; superusers always have it.
+    PROBE_SQL = "SELECT CASE WHEN pg_has_role('pg_read_all_settings', 'USAGE') THEN 1 ELSE 0 END;".freeze
+
     # A postgres_session that has been proven to work. Raises (failing the calling
-    # control) if `SELECT 1` doesn't come back as exactly "1" -- which covers an
-    # unreachable host, bad credentials, a missing psql client, etc.
+    # control) unless the probe returns exactly "1": "0" means the login lacks
+    # pg_read_all_settings; anything else is psql's error (unreachable host, bad
+    # credentials, missing psql client, etc.).
     def sql_session(password)
       session = inspec.postgres_session(dba, password, host, port)
       key = [dba, host, port, db]
       cache = AwsRdsConnection.session_cache
-      unless cache.key?(key)
-        output = begin
-          session.query('SELECT 1;', [db]).output.to_s.strip
-        rescue StandardError => e
-          e.message
-        end
-        cache[key] = output == '1' ? nil : output
-      end
-      if cache[key]
-        raise AwsRdsConnectionError,
-              "Preflight failed: cannot run SQL against #{dba}@#{host}:#{port}/#{db} " \
-              "(connection source: #{connection_source}). " \
-              "psql output: #{cache[key].empty? ? '(none)' : cache[key]}"
-      end
+      cache[key] = probe_error(session) unless cache.key?(key)
+      raise AwsRdsConnectionError, "Preflight failed: #{cache[key]}" if cache[key]
+
       session
     end
 
@@ -196,6 +193,24 @@ module Inspec::Resources
     end
 
     private
+
+    # nil when the probe succeeds, otherwise the reason SQL controls can't run.
+    def probe_error(session)
+      output = begin
+        session.query(PROBE_SQL, [db]).output.to_s.strip
+      rescue StandardError => e
+        e.message
+      end
+      return nil if output == '1'
+
+      if output == '0'
+        return "#{dba} lacks the pg_read_all_settings role, which many controls need to read server settings. " \
+               "Grant it with: GRANT pg_read_all_settings TO #{dba};"
+      end
+
+      "cannot run SQL against #{dba}@#{host}:#{port}/#{db} (connection source: #{connection_source}). " \
+        "psql output: #{output.empty? ? '(none)' : output}"
+    end
 
     def connection_source
       return 'manual inputs' unless aws_available?

@@ -45,14 +45,30 @@ Usually only these are needed:
 ```yaml
 aws_db_instance_identifier: '<rds-db-instance-id>'   # the instance ID, not the endpoint
 aws_region: 'us-east-1'
+pg_dba_user: 'stig_audit'                            # the account the scan logs in as
 pg_dba_password: '<password>'                        # always required; AWS can't return it
 ```
 
-With the instance ID set, the profile looks up the host, port, database name and master username from AWS. Without
-AWS access, set `pg_host`, `pg_port`, `pg_db` and `pg_dba` yourself.
+With the instance ID set, the profile looks up the host, port and database name from AWS. Without AWS access, set
+`pg_host`, `pg_port` and `pg_db` yourself. The login account is never looked up: the scan always runs as
+`pg_dba_user`.
 
 To reach the database through a bastion host or SSH tunnel, set `pg_host` and `pg_port` to the tunnel's address and
 `pg_use_manual_endpoint: true`. SQL then connects there, while everything else still comes from AWS.
+
+### Audit account
+
+Scan as a dedicated account rather than the master user. It needs only `pg_read_all_settings`, to read settings such
+as `shared_preload_libraries`. Create it as the master user:
+
+```sql
+CREATE ROLE stig_audit LOGIN PASSWORD '<password>' CONNECTION LIMIT 2;
+GRANT pg_read_all_settings TO stig_audit;
+```
+
+If the account lacks `pg_read_all_settings`, every SQL control fails with a message saying so, before any check runs.
+The connection limit keeps the account from failing V-261857 itself. Don't grant it `rds_superuser`: V-261924 would
+flag it.
 
 Every other input has a STIG-aligned default. Change one only if your System Security Plan specifies a different
 value. [inputs.yml.example](inputs.yml.example) lists them all, and [inspec.yml](inspec.yml) describes each one.

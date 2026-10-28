@@ -16,13 +16,15 @@
 
 # Recommended: AWS CLI auto-discovery. When aws_db_instance_identifier is set
 # (and the `aws` CLI is installed/authenticated on the runner), the instance's
-# endpoint, port, database name, and master username are looked up
-# automatically via `aws rds describe-db-instances` -- you don't need to type
-# them in below.
+# endpoint, port and database name are looked up automatically via
+# `aws rds describe-db-instances` -- you don't need to type them in below.
 aws_db_instance_identifier: '<rds-db-instance-id>'
 aws_region: 'us-east-1'
 
-# Always required manually: the AWS API has no way to return this secret.
+# Always required: the account the scan logs in as (never discovered), and its
+# password. Use a dedicated audit account granted pg_read_all_settings rather
+# than the master user -- see "Audit account" in the README.
+pg_dba_user: 'stig_audit'
 pg_dba_password: '<password>'
 
 # --- Manual connection fallback ---
@@ -30,13 +32,12 @@ pg_dba_password: '<password>'
 # doesn't have AWS CLI access (e.g., connecting from a network path different
 # from where `aws` is authenticated). Ignored (overridden) whenever AWS CLI
 # discovery above succeeds.
-# pg_dba: 'postgres'
 # pg_host: '<endpoint>.rds.amazonaws.com'
 # pg_db: 'postgres'
 # pg_port: 5432
 # aws_cli_profile: ''
 # Through a bastion or SSH tunnel: connect SQL to pg_host/pg_port above even
-# with discovery on (the database name, master user and AWS checks still use AWS).
+# with discovery on (the database name and AWS checks still use AWS).
 # pg_use_manual_endpoint: true
 
 # =====================================================================

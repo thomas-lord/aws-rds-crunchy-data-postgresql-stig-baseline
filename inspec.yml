@@ -22,13 +22,14 @@ inputs:
 # default and only needs overriding if your organization's documented
 # policy differs from that default.
 #
-# Recommended path: set aws_db_instance_identifier (+ aws_region) and
-# pg_dba_password; pg_host/pg_port/pg_db/pg_dba are then auto-discovered
-# via `aws rds describe-db-instances`. pg_dba_password can never be
-# auto-discovered (it's a secret) and must always be supplied manually.
+# Recommended path: set aws_db_instance_identifier (+ aws_region),
+# pg_dba_user and pg_dba_password; pg_host/pg_port/pg_db are then
+# auto-discovered via `aws rds describe-db-instances`. The login account
+# and its password are never discovered: the scan logs in as the account
+# you name, such as a read-only audit account (see README).
 # =====================================================================
 - name: aws_db_instance_identifier
-  description: "The RDS DB instance identifier (not the endpoint hostname). When set (and the AWS CLI is available), pg_host/pg_port/pg_db/pg_dba below are auto-discovered via `aws rds describe-db-instances` and the manual values are only used as a fallback."
+  description: "The RDS DB instance identifier (not the endpoint hostname). When set (and the AWS CLI is available), pg_host/pg_port/pg_db below are auto-discovered via `aws rds describe-db-instances` and the manual values are only used as a fallback."
   type: string
   value: ""
 
@@ -37,8 +38,13 @@ inputs:
   type: string
   value: ""
 
+- name: pg_dba_user
+  description: "Database account the scan logs in as, e.g. a read-only audit account. Required; never taken from AWS discovery. It needs the pg_read_all_settings role (see README)."
+  type: string
+  required: true
+
 - name: pg_dba_password
-  description: "The password for the postgres DBA user. Always required manually \u2014 the AWS CLI/API has no way to retrieve this secret."
+  description: "Password for pg_dba_user. Always required manually \u2014 the AWS CLI/API has no way to retrieve this secret."
   type: string
   value: ""
   required: true
@@ -46,13 +52,6 @@ inputs:
 
 # --- Manual connection fallback (only used if aws_db_instance_identifier is unset,
 #     or the AWS CLI is unavailable) ---
-- name: pg_dba
-  description: "Fallback postgres DBA (master) user; overridden by the auto-discovered MasterUsername when AWS CLI discovery succeeds."
-  type: string
-  value: "postgres"
-  required: true
-  sensitive: true
-
 - name: pg_host
   description: "Fallback hostname/endpoint; overridden by the auto-discovered Endpoint.Address when AWS CLI discovery succeeds, unless pg_use_manual_endpoint is set."
   type: string
@@ -66,7 +65,7 @@ inputs:
   value: 5432
 
 - name: pg_use_manual_endpoint
-  description: "Connect SQL to pg_host/pg_port even when AWS CLI discovery is in use, e.g. through a bastion host or SSH tunnel. pg_db, pg_dba and all AWS checks still use discovery"
+  description: "Connect SQL to pg_host/pg_port even when AWS CLI discovery is in use, e.g. through a bastion host or SSH tunnel. pg_db and all AWS checks still use discovery"
   type: boolean
   value: false
   required: true

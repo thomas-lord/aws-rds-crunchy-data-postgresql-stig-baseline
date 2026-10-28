@@ -55,10 +55,18 @@ jobs:
           done
           docker logs stigpg
           exit 1
+      # Same SQL as the README's "Audit account" section, so the documented grants are
+      # proven sufficient on every run.
+      - name: Create the audit account
+        run: |
+          docker exec -i stigpg psql -U postgres -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE stig_audit LOGIN PASSWORD 'ci-audit-password' CONNECTION LIMIT 2;
+          GRANT pg_read_all_settings TO stig_audit;
+          SQL
       - name: Scan with cinc-auditor
         run: |
           mkdir -p out
-          printf "pg_host: '%s'\npg_dba_password: 'ci-password'\n" "$PG_IP" > out/inputs.yml
+          printf "pg_host: '%s'\npg_dba_user: 'stig_audit'\npg_dba_password: 'ci-audit-password'\n" "$PG_IP" > out/inputs.yml
           # Exit codes 100/101 mean failed/skipped controls, which are expected here.
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":/profile -v "$PWD/out":/out \
             "$CINC_AUDITOR_IMAGE" exec /profile -t docker://stigpg --input-file /out/inputs.yml \
