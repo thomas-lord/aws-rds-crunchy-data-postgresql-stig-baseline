@@ -77,8 +77,10 @@ control 'V-261909' do
     its('output.strip') { should cmp input('pg_client_min_messages') }
   end
 
-  describe sql.query('SHOW log_file_mode;', [conn.db]) do
-    its('output.strip') { should cmp input('pg_log_file_mode') }
+  # Log file permissions can't be checked or set on RDS (log_file_mode is fixed at 0644), so
+  # that half of the check is manual.
+  describe 'On RDS, log_file_mode is fixed at 0644 and cannot be changed, and the log files are not on a file system anyone can reach: they can only be read through the RDS API (rds:DownloadDBLogFilePortion, rds:DownloadCompleteDBLogFile) or, when exported, CloudWatch Logs (logs:GetLogEvents, logs:FilterLogEvents, logs:StartQuery). Manually verify that only authorized personnel (ISSO, ISSM, SA, DBA) have IAM permissions to read them.' do
+    skip 'On RDS, log_file_mode is fixed at 0644 and cannot be changed, and the log files are not on a file system anyone can reach: they can only be read through the RDS API (rds:DownloadDBLogFilePortion, rds:DownloadCompleteDBLogFile) or, when exported, CloudWatch Logs (logs:GetLogEvents, logs:FilterLogEvents, logs:StartQuery). Manually verify that only authorized personnel (ISSO, ISSM, SA, DBA) have IAM permissions to read them.'
   end
 
   rds_check_parameter_apply_status(conn)

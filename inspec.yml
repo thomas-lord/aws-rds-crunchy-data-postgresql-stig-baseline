@@ -154,11 +154,6 @@ inputs:
   type: string
   value: "error"
 
-- name: pg_log_file_mode
-  description: "Expected value of log_file_mode (V-261875/879/909)"
-  type: string
-  value: "0600"
-
 - name: pgaudit_log_items
   description: "pgaudit.log classes that must be enabled (V-261938 and related audit controls). Accepts pgaudit syntax, e.g. [\"all\", \"-misc\"]"
   type: array

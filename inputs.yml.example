@@ -57,7 +57,6 @@ pg_dba_password: '<password>'
 # pg_ssl: 'on'
 # pg_password_encryption: 'scram-sha-256'
 # pg_client_min_messages: 'error'
-# pg_log_file_mode: '0600'
 # pgaudit_log_items: ['ddl', 'role', 'read', 'write']
 # pg_encryption_of_data_at_rest_required: true
 # pg_require_customer_managed_kms_key: false   # true needs kms:DescribeKey

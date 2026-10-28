@@ -55,12 +55,7 @@ control 'V-261879' do
   tag stig_id: 'CD16-00-002400'
   tag cci: ["CCI-001494"]
   tag nist: ["AU-9 a"]
-  conn = rds_connection
-  sql = conn.sql_session(input('pg_dba_password'))
-
-  describe sql.query('SHOW log_file_mode;', [conn.db]) do
-    its('output.strip') { should cmp input('pg_log_file_mode') }
+  describe 'On RDS, postgresql.conf and the log files are managed by AWS and not reachable on a file system, and log_file_mode is fixed at 0644. Audit configuration lives in the DB parameter group and the instance log settings. Manually verify that only authorized personnel (ISSO, ISSM, SA, DBA) have IAM permissions to change it (rds:ModifyDBParameterGroup, rds:ResetDBParameterGroup, rds:ModifyDBInstance) or to read or delete the logs (rds:DownloadDBLogFilePortion, rds:DownloadCompleteDBLogFile, and the CloudWatch Logs actions on the exported log group).' do
+    skip 'On RDS, postgresql.conf and the log files are managed by AWS and not reachable on a file system, and log_file_mode is fixed at 0644. Audit configuration lives in the DB parameter group and the instance log settings. Manually verify that only authorized personnel (ISSO, ISSM, SA, DBA) have IAM permissions to change it (rds:ModifyDBParameterGroup, rds:ResetDBParameterGroup, rds:ModifyDBInstance) or to read or delete the logs (rds:DownloadDBLogFilePortion, rds:DownloadCompleteDBLogFile, and the CloudWatch Logs actions on the exported log group).'
   end
-
-  rds_check_parameter_apply_status(conn)
 end
