@@ -99,6 +99,17 @@ inputs:
   type: numeric
   value: 100
 
+- name: pg_max_connections_per_role
+  description: "Organization-defined maximum CONNECTION LIMIT for each login role (V-261857). Roles with no limit (-1) are always a finding"
+  type: numeric
+  value: 100
+
+- name: pg_connection_limit_exempt_roles
+  description: "Login roles not checked for a per-role connection limit (V-261857); rdsadmin is AWS's own account, whose limit customers can't change"
+  type: array
+  value:
+    - "rdsadmin"
+
 - name: pg_log_line_prefix
   description: "Organization-defined log_line_prefix capturing timestamp, user, database, and client (V-261866/867/868/871/922)"
   type: string

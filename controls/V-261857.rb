@@ -78,5 +78,31 @@ control 'V-261857' do
     it { should cmp <= input('pg_max_connections').to_i }
   end
 
+  # Per-role limits (rolconnlimit) for every role that can log in; a limit means nothing
+  # for NOLOGIN roles. -1 means unlimited, which the STIG always counts as a finding.
+  # Roles in pg_connection_limit_exempt_roles are skipped (by default rdsadmin, AWS's own
+  # account, whose limit customers can't change).
+  max_per_role = input('pg_max_connections_per_role').to_i
+  exempt_roles = input('pg_connection_limit_exempt_roles')
+  role_rows = sql.query('SELECT rolname, rolconnlimit FROM pg_roles WHERE rolcanlogin ORDER BY rolname;', [conn.db]).lines
+  # Each row is "name|limit"; anything else (e.g. an error message) is reported as unreadable.
+  unreadable_rows = role_rows.grep_v(/\A[^|]+\|-?\d+\z/)
+  role_limits = (role_rows - unreadable_rows).to_h { |row| [row.split('|')[0], row.split('|')[1].to_i] }
+  over_limit = role_limits.except(*exempt_roles)
+                          .select { |_, limit| limit == -1 || limit > max_per_role }
+                          .map { |name, limit| "#{name} (#{limit == -1 ? 'unlimited' : limit})" }
+  describe "Login role connection limits (max #{max_per_role} per role; exempt: #{exempt_roles.empty? ? 'none' : exempt_roles.join(', ')})" do
+    # The scanning account can log in, so an empty list means the query didn't run.
+    it 'should list at least one login role' do
+      expect(role_limits).not_to be_empty
+    end
+    it 'should return only role/limit rows' do
+      expect(unreadable_rows).to be_empty
+    end
+    it 'should have no role unlimited (-1) or above the per-role maximum' do
+      expect(over_limit).to be_empty
+    end
+  end
+
   rds_check_parameter_apply_status(conn)
 end
