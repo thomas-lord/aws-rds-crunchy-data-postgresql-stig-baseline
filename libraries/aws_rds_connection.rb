@@ -57,13 +57,21 @@ module Inspec::Resources
       @manual_port = opts[:port]
       @manual_db = opts[:db].to_s
       @manual_dba = opts[:dba].to_s
+      @use_manual_endpoint = opts[:use_manual_endpoint] ? true : false
     end
 
+    # With use_manual_endpoint (e.g. reaching the instance through a bastion or SSH
+    # tunnel), SQL connects to the manual host/port even when AWS discovery is in use;
+    # db, dba and every AWS check still come from discovery.
     def host
+      return @manual_host if @use_manual_endpoint
+
       aws_attr('Endpoint', 'Address') || @manual_host
     end
 
     def port
+      return @manual_port.to_i if @use_manual_endpoint
+
       (aws_attr('Endpoint', 'Port') || @manual_port).to_i
     end
 
@@ -114,7 +122,7 @@ module Inspec::Resources
       if cache[key]
         raise AwsRdsConnectionError,
               "Preflight failed: cannot run SQL against #{dba}@#{host}:#{port}/#{db} " \
-              "(connection source: #{aws_available? ? "AWS CLI discovery for #{@aws_instance_id}" : 'manual inputs'}). " \
+              "(connection source: #{connection_source}). " \
               "psql output: #{cache[key].empty? ? '(none)' : cache[key]}"
       end
       session
@@ -132,7 +140,8 @@ module Inspec::Resources
     # can't reach the database. sources are IPv4 CIDRs, IPv6 CIDRs and prefix-list IDs;
     # group_refs are security groups the rules allow by reference.
     def security_group_ingress
-      db_port = port.to_i
+      # The instance's own port, not `port`, which may be a tunnel's local port.
+      db_port = (aws_attr('Endpoint', 'Port') || port).to_i
       ids = (aws_attr('VpcSecurityGroups') || []).map { |g| g['VpcSecurityGroupId'] }.compact
       ids.map do |id|
         perms = aws_json(%W(ec2 describe-security-groups --group-ids #{id} --query SecurityGroups[0].IpPermissions)) || []
@@ -182,6 +191,14 @@ module Inspec::Resources
     end
 
     private
+
+    def connection_source
+      return 'manual inputs' unless aws_available?
+
+      return "pg_host/pg_port (pg_use_manual_endpoint), with AWS CLI discovery for #{@aws_instance_id}" if @use_manual_endpoint
+
+      "AWS CLI discovery for #{@aws_instance_id}"
+    end
 
     def aws_attr(*path)
       return nil unless aws_available?

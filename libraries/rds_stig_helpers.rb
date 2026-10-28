@@ -13,7 +13,8 @@ module RdsStigHelpers
       host: input('pg_host'),
       port: input('pg_port'),
       db: input('pg_db'),
-      dba: input('pg_dba')
+      dba: input('pg_dba'),
+      use_manual_endpoint: input('pg_use_manual_endpoint')
     )
   end
 

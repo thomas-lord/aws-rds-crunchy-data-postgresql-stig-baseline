@@ -54,16 +54,21 @@ inputs:
   sensitive: true
 
 - name: pg_host
-  description: "Fallback hostname/endpoint; overridden by the auto-discovered Endpoint.Address when AWS CLI discovery succeeds."
+  description: "Fallback hostname/endpoint; overridden by the auto-discovered Endpoint.Address when AWS CLI discovery succeeds, unless pg_use_manual_endpoint is set."
   type: string
   value: "localhost"
   required: true
   sensitive: true
 
 - name: pg_port
-  description: "Fallback port; overridden by the auto-discovered Endpoint.Port when AWS CLI discovery succeeds."
+  description: "Fallback port; overridden by the auto-discovered Endpoint.Port when AWS CLI discovery succeeds, unless pg_use_manual_endpoint is set."
   type: numeric
   value: 5432
+
+- name: pg_use_manual_endpoint
+  description: "Connect SQL to pg_host/pg_port even when AWS CLI discovery is in use, e.g. through a bastion host or SSH tunnel. pg_db, pg_dba and all AWS checks still use discovery"
+  type: boolean
+  value: false
   required: true
 
 - name: pg_db

@@ -35,6 +35,9 @@ pg_dba_password: '<password>'
 # pg_db: 'postgres'
 # pg_port: 5432
 # aws_cli_profile: ''
+# Through a bastion or SSH tunnel: connect SQL to pg_host/pg_port above even
+# with discovery on (the database name, master user and AWS checks still use AWS).
+# pg_use_manual_endpoint: true
 
 # =====================================================================
 # OPTIONAL: organization policy overrides (defaults already STIG-aligned;
