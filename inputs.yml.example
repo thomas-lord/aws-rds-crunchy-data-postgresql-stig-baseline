@@ -49,7 +49,7 @@ pg_dba_password: '<password>'
 # pg_max_connections: 100
 # pg_max_connections_per_role: 100
 # pg_connection_limit_exempt_roles: ['rdsadmin']
-# pg_log_line_prefix: '%m [%p]: db=%d,user=%u,app=%a,client=%h '
+# pg_log_line_prefix: '%m:%r:%u@%d:[%p]:%l:%e:%s:%v:%x:%c:%q%a:'
 # pg_log_connections: 'on'
 # pg_log_disconnections: 'on'
 # pg_log_hostname: 'on'
