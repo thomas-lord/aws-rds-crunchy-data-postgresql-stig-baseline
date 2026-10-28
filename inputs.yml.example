@@ -53,5 +53,6 @@ pg_dba_password: '<password>'
 # pg_log_file_mode: '0600'
 # pgaudit_log_items: ['ddl', 'role', 'read', 'write']
 # pg_encryption_of_data_at_rest_required: true
+# pg_require_customer_managed_kms_key: false   # true needs kms:DescribeKey
 # pg_storage_alarm_threshold_percent: 75
 # pg_approved_ingress_cidrs: []

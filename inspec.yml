@@ -153,6 +153,11 @@ inputs:
   type: boolean
   value: true
 
+- name: pg_require_customer_managed_kms_key
+  description: "Whether RDS storage must be encrypted with a customer-managed KMS key rather than an AWS-managed one such as aws/rds (V-261901/930/931). The STIG doesn't require it; set true if your policy does. Needs kms:DescribeKey"
+  type: boolean
+  value: false
+
 - name: pg_storage_alarm_threshold_percent
   description: "Organization-defined percent-utilized threshold at which support staff must be warned of audit/storage capacity (V-261919)"
   type: numeric

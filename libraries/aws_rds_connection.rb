@@ -44,8 +44,9 @@ module Inspec::Resources
     # parent's class-level instance variables.
     @instance_cache = {}
     @session_cache = {}
+    @kms_cache = {}
     class << self
-      attr_reader :instance_cache, :session_cache
+      attr_reader :instance_cache, :session_cache, :kms_cache
     end
 
     def initialize(opts = {})
@@ -159,6 +160,21 @@ module Inspec::Resources
       return [] unless aws_available?
       aws_json(%W(rds describe-pending-maintenance-actions --filters Name=db-instance-id,Values=#{@aws_instance_id}
                   --query PendingMaintenanceActions)) || []
+    end
+
+    # Who manages a KMS key: "CUSTOMER" for a customer-managed key, "AWS" for an
+    # AWS-managed one such as aws/rds. Looked up once per key per scan (errors too);
+    # raises on failure, e.g. without kms:DescribeKey permission.
+    def kms_key_manager(key_id)
+      key = [key_id, @region, @profile]
+      cache = AwsRdsConnection.kms_cache
+      cache[key] ||= begin
+        { data: aws_json(%W(kms describe-key --key-id #{key_id} --query KeyMetadata.KeyManager)) }
+      rescue AwsRdsConnectionError => e
+        { error: e.message }
+      end
+      raise AwsRdsConnectionError, cache[key][:error] if cache[key][:error]
+      cache[key][:data]
     end
 
     def to_s
