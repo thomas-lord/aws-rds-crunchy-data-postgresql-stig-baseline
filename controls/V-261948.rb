@@ -1,5 +1,10 @@
 control 'V-261948' do
   title 'PostgreSQL must generate audit records when categories of information (e.g., classification levels/security levels) are modified.'
+  desc <<~EOT
+    Changes in categories of information must be tracked. Without an audit trail, unauthorized access to protected data could go undetected.
+
+    For detailed information on categorizing information, refer to FIPS Publication 199, Standards for Security Categorization of federal information and information systems, and FIPS Publication 200, Minimum Security Requirements for federal information and information systems.
+  EOT
   desc 'check', <<~EOT
     If category tracking is not required in the database, this is not applicable.
 

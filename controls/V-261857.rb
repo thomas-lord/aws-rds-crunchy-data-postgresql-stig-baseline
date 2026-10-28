@@ -1,5 +1,16 @@
 control 'V-261857' do
   title 'PostgreSQL must limit the number of concurrent sessions to an organization-defined number per user for all accounts and/or account types.'
+  desc <<~EOT
+    Database management includes the ability to control the number of users and user sessions using PostgreSQL. Unlimited concurrent connections to PostgreSQL could allow a successful denial-of-service (DoS) attack by exhausting connection resources; and a system can also fail or be degraded by an overload of legitimate users. Limiting the number of concurrent sessions per user is helpful in reducing these risks.
+
+    This requirement addresses concurrent session control for a single account. It does not address concurrent sessions by a single user via multiple system accounts; and it does not deal with the total number of sessions across all accounts.
+
+    The capability to limit the number of concurrent sessions per user must be configured in or added to PostgreSQL (for example, by use of a log on trigger), when this is technically feasible. Note that it is not sufficient to limit sessions via a web server or application server alone, because legitimate users and adversaries can potentially connect to PostgreSQL by other means.
+
+    The organization will need to define the maximum number of concurrent sessions by account type, by account, or a combination thereof. In deciding on the appropriate number, it is important to consider the work requirements of the various types of users. For example, two might be an acceptable limit for general users accessing the database via an application; but 10 might be too few for a database administrator using a database management GUI tool, where each query tab and navigation pane may count as a separate session.
+
+    (Sessions may also be referred to as connections or logons, which for the purposes of this requirement are synonyms).
+  EOT
   desc 'check', <<~EOT
     To check the total amount of connections allowed by the database, as the database administrator, run the following SQL:
 

@@ -1,5 +1,8 @@
 control 'V-261946' do
   title 'PostgreSQL must generate audit records when security objects are modified.'
+  desc <<~EOT
+    Changes in the database objects (tables, views, procedures, functions) that record and control permissions, privileges, and roles granted to users and roles must be tracked. Without an audit trail, unauthorized changes to the security subsystem could go undetected. The database could be severely compromised or rendered inoperative.
+  EOT
   desc 'check', <<~EOT
     As the database administrator, verify pgaudit is enabled by running the following SQL:
 

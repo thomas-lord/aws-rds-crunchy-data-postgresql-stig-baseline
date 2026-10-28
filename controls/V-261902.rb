@@ -1,5 +1,14 @@
 control 'V-261902' do
   title 'PostgreSQL must isolate security functions from nonsecurity functions.'
+  desc <<~EOT
+    An isolation boundary provides access control and protects the integrity of the hardware, software, and firmware that perform security functions. 
+
+    Security functions are the hardware, software, and/or firmware of the information system responsible for enforcing the system security policy and supporting the isolation of code and data on which the protection is based.
+
+    Developers and implementers can increase the assurance in security functions by employing well-defined security policy models; structured, disciplined, and rigorous hardware and software development techniques; and sound system/security engineering principles. 
+
+    Database Management Systems typically separate security functionality from nonsecurity functionality via separate databases or schemas. Database objects or code implementing security functionality should not be commingled with objects or code implementing application logic. When security and nonsecurity functionality are commingled, users who have access to nonsecurity functionality may be able to access security functionality.
+  EOT
   desc 'check', <<~EOT
     Check PostgreSQL settings to determine whether objects or code implementing security functionality are located in a separate security domain, such as a separate database or schema created specifically for security functionality.
 

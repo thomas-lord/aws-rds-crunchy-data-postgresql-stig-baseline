@@ -1,5 +1,8 @@
 control 'V-261926' do
   title 'PostgreSQL must disable network functions, ports, protocols, and services deemed by the organization to be nonsecure, in accordance with the Ports, Protocols, and Services Management (PPSM) guidance.'
+  desc <<~EOT
+    Use of nonsecure network functions, ports, protocols, and services exposes the system to avoidable threats.
+  EOT
   desc 'check', <<~EOT
     As the database administrator, run the following SQL:
 

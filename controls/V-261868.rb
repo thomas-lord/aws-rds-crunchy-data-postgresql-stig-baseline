@@ -1,5 +1,12 @@
 control 'V-261868' do
   title 'PostgreSQL must produce audit records containing sufficient information to establish where the events occurred.'
+  desc <<~EOT
+    Information system auditing capability is critical for accurate forensic analysis. Without establishing where events occurred, it is impossible to establish, correlate, and investigate the events relating to an incident.
+
+    In order to compile an accurate risk assessment and provide forensic analysis, it is essential for security personnel to know where events occurred, such as application components, modules, session identifiers, filenames, host names, and functionality. 
+
+    Associating information about where the event occurred within the application provides a means of investigating an attack; recognizing resource utilization or capacity thresholds; or identifying an improperly configured application.
+  EOT
   desc 'check', <<~EOT
     As the database administrator (shown here as "postgres"), check the current log_line_prefix setting by running the following SQL:
 

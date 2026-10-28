@@ -1,5 +1,12 @@
 control 'V-261928' do
   title 'PostgreSQL must use NSA-approved cryptography to protect classified information in accordance with the data owner\'s requirements.'
+  desc <<~EOT
+    Use of weak or untested encryption algorithms undermines the purposes of using encryption to protect data. The application must implement cryptographic modules adhering to the higher standards approved by the federal government since this provides assurance they have been tested and validated.
+
+    It is the responsibility of the data owner to assess the cryptography requirements in light of applicable federal laws, Executive Orders, directives, policies, regulations, and standards.
+
+    NSA-approved cryptography for classified networks is hardware based. This requirement addresses the compatibility of PostgreSQL with the encryption devices.
+  EOT
   desc 'check', <<~EOT
     If PostgreSQL is deployed in an unclassified environment, this is not applicable.
 

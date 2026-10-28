@@ -1,5 +1,8 @@
 control 'V-261952' do
   title 'PostgreSQL must generate audit records when security objects are deleted.'
+  desc <<~EOT
+    The removal of security objects from the database/PostgreSQL would seriously degrade a system's information assurance posture. If such an event occurs, it must be logged.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGDATA and PGLOG environment variables. Refer to APPENDIX-F for instructions on configuring PGDATA and APPENDIX-I for PGLOG.
 

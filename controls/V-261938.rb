@@ -1,5 +1,17 @@
 control 'V-261938' do
   title 'PostgreSQL must be able to generate audit records when security objects are accessed.'
+  desc <<~EOT
+    Changes to the security configuration must be tracked.
+
+    This requirement applies to situations where security data is retrieved or modified via data manipulation operations, as opposed to via specialized security functionality.
+
+    In an SQL environment, types of access include, but are not necessarily limited to:
+    SELECT
+    INSERT
+    UPDATE
+    DELETE
+    EXECUTE
+  EOT
   desc 'check', <<~EOT
     As the database administrator, verify pgaudit is enabled by running the following SQL:
 

@@ -1,5 +1,12 @@
 control 'V-261933' do
   title 'PostgreSQL must maintain the confidentiality and integrity of information during reception.'
+  desc <<~EOT
+    Information can be either unintentionally or maliciously disclosed or modified during reception, including, for example, during aggregation, at protocol transformation points, and during packing/unpacking. These unauthorized disclosures or modifications compromise the confidentiality or integrity of the information.
+
+    This requirement applies only to those applications that are either distributed or can allow access to data nonlocally. Use of this requirement will be limited to situations where the data owner has a strict requirement for ensuring data integrity and confidentiality is maintained at every step of the data transfer and handling process. 
+
+    When receiving data, PostgreSQL, associated applications, and infrastructure must leverage protection mechanisms.
+  EOT
   desc 'check', <<~EOT
     If the data owner does not have a strict requirement for ensuring data integrity and confidentiality is maintained at every step of the data transfer and handling process, this is not a finding.
 

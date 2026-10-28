@@ -1,5 +1,10 @@
 control 'V-261953' do
   title 'PostgreSQL must generate audit records when unsuccessful attempts to delete security objects occur.'
+  desc <<~EOT
+    The removal of security objects from the database/PostgreSQL would seriously degrade a system's information assurance posture. If such an action is attempted, it must be logged.
+
+    To aid in diagnosis, it is necessary to keep track of failed attempts in addition to the successful ones.
+  EOT
   desc 'check', <<~EOT
     As the database administrator, verify pgaudit is enabled by running the following SQL:
 

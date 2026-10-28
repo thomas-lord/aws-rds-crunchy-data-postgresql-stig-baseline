@@ -1,5 +1,12 @@
 control 'V-261967' do
   title 'PostgreSQL must offload audit data to a separate log management facility; this must be continuous and in near real time for systems with a network connection to the storage facility and weekly or more often for standalone systems.'
+  desc <<~EOT
+    Information stored in one location is vulnerable to accidental or incidental deletion or alteration.
+
+    Offloading is a common process in information systems with limited audit storage capacity.
+
+    PostgreSQL may write audit records to database tables, to files in the file system, to other kinds of local repository, or directly to a centralized log management system. Whatever the method used, it must be compatible with offloading the records to the centralized system.
+  EOT
   desc 'check', <<~EOT
     As the database administrator (shown here as "postgres"), ensure PostgreSQL uses syslog by running the following SQL:
 

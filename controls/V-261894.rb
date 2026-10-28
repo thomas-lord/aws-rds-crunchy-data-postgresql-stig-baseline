@@ -1,5 +1,14 @@
 control 'V-261894' do
   title 'PostgreSQL must enforce authorized access to all PKI private keys stored/used by PostgreSQL.'
+  desc <<~EOT
+    The DOD standard for authentication is DOD-approved PKI certificates. PKI certificate-based authentication is performed by requiring the certificate holder to cryptographically prove possession of the corresponding private key.
+
+    If the private key is stolen, an attacker can use the private key(s) to impersonate the certificate holder. In cases where the DBMS-stored private keys are used to authenticate PostgreSQL to the system's clients, loss of the corresponding private keys would allow an attacker to successfully perform undetected man in the middle attacks against the PostgreSQL system and its clients.
+
+    Both the holder of a digital certificate and the issuing authority must take careful measures to protect the corresponding private key. Private keys should always be generated and protected in FIPS 140-2 or 140-3 validated cryptographic modules.
+
+    All access to the private key(s) of PostgreSQL must be restricted to authorized and authenticated users. If unauthorized users have access to one or more of PostgreSQL's private keys, an attacker could gain access to the key(s) and use them to impersonate the database on the network or otherwise perform unauthorized actions.
+  EOT
   desc 'check', <<~EOT
     As the database administrator (shown here as "postgres"), verify the following settings:
 

@@ -1,5 +1,14 @@
 control 'V-261869' do
   title 'PostgreSQL must produce audit records containing sufficient information to establish the sources (origins) of the events.'
+  desc <<~EOT
+    Information system auditing capability is critical for accurate forensic analysis. Without establishing the source of the event, it is impossible to establish, correlate, and investigate the events relating to an incident.
+
+    To compile an accurate risk assessment and provide forensic analysis, it is essential for security personnel to know where events occurred, such as application components, modules, session identifiers, filenames, host names, and functionality.
+
+    In addition to logging where events occur within the application, the application must also produce audit records that identify the application itself as the source of the event.
+
+    Associating information about the source of the event within the application provides a means of investigating an attack; recognizing resource utilization or capacity thresholds; or identifying an improperly configured application.
+  EOT
   desc 'check', <<~EOT
     Check PostgreSQL settings and existing audit records to verify information specific to the source (origin) of the event is being captured and stored with audit records.
 

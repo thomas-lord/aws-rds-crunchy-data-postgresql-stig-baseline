@@ -1,5 +1,12 @@
 control 'V-261961' do
   title 'PostgreSQL must generate audit records when concurrent logons/connections by the same user from different workstations occur.'
+  desc <<~EOT
+    For completeness of forensic analysis, it is necessary to track who logs on to PostgreSQL.
+
+    Concurrent connections by the same user from multiple workstations may be valid use of the system; or such connections may be due to improper circumvention of the requirement to use the Common Access Card (CAC) for authentication; or they may indicate unauthorized account sharing; or they may be because an account has been compromised.
+
+    If multiple, concurrent logons by a given user can be reliably reconstructed from the log entries for other events (logons/connections; voluntary and involuntary disconnections), then it is not mandatory to create additional log entries specifically for this.
+  EOT
   desc 'check', <<~EOT
     As the database administrator, verify that log_connections and log_disconnections are enabled by running the following SQL:
 

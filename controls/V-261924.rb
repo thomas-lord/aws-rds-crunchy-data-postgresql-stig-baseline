@@ -1,5 +1,12 @@
 control 'V-261924' do
   title 'PostgreSQL must enforce access restrictions associated with changes to the configuration of the DBMS or database(s).'
+  desc <<~EOT
+    Failure to provide logical access restrictions associated with changes to configuration may have significant effects on the overall security of the system.
+
+    When dealing with access restrictions pertaining to change control, it should be noted that any changes to the hardware, software, and/or firmware components of the information system can potentially have significant effects on the overall security of the system.
+
+    Accordingly, only qualified and authorized individuals should be allowed to obtain access to system components for the purposes of initiating changes, including upgrades and modifications.
+  EOT
   desc 'check', <<~EOT
     To list all the permissions of individual roles, as the database administrator (shown here as "postgres"), run the following SQL:
 

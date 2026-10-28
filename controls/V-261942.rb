@@ -1,5 +1,10 @@
 control 'V-261942' do
   title 'PostgreSQL must generate audit records when privileges/permissions are added.'
+  desc <<~EOT
+    Changes in the permissions, privileges, and roles granted to users and roles must be tracked. Without an audit trail, unauthorized elevation or restriction of privileges could go undetected. Elevated privileges give users access to information and functionality that they should not have; restricted privileges wrongly deny access to authorized users.
+
+    In an SQL environment, adding permissions is typically done via the GRANT command, or, in the negative, the DENY command.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGDATA and PGLOG environment variables. Refer to APPENDIX-F for instructions on configuring PGDATA and APPENDIX-I for PGLOG.
 

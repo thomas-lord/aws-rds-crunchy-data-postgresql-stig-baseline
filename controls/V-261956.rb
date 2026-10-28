@@ -1,5 +1,8 @@
 control 'V-261956' do
   title 'PostgreSQL must generate audit records when successful logons or connections occur.'
+  desc <<~EOT
+    For completeness of forensic analysis, it is necessary to track who/what (a user or other principal) logs on to PostgreSQL.
+  EOT
   desc 'check', <<~EOT
     Note: The following instructions use the PGDATA and PGLOG environment variables. Refer to APPENDIX-F for instructions on configuring PGDATA and APPENDIX-I for PGLOG.
 

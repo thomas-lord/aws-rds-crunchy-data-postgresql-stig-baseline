@@ -1,5 +1,10 @@
 control 'V-261884' do
   title 'Database objects (including but not limited to tables, indexes, storage, stored procedures, functions, triggers, links to software external to the DBMS, etc.) must be owned by database/PostgreSQL principals authorized for ownership.'
+  desc <<~EOT
+    Within the database, object ownership implies full privileges to the owned object, including the privilege to assign access to the owned objects to other subjects. Database functions and procedures can be coded using definer's rights. This allows anyone who uses the object to perform the actions if they were the owner. If not properly managed, this can lead to privileged actions being taken by unauthorized individuals.
+
+    Conversely, if critical tables or other objects rely on unauthorized owner accounts, these objects may be lost when an account is removed.
+  EOT
   desc 'check', <<~EOT
     Review system documentation to identify accounts authorized to own database objects. Review accounts that own objects in the database(s).
 

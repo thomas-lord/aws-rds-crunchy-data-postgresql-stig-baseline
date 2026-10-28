@@ -1,5 +1,12 @@
 control 'V-283674' do
   title 'PostgreSQL products must be a version supported by the vendor.'
+  desc <<~EOT
+    Unsupported software and systems should not be used because fixes to newly identified bugs will not be implemented by the vendor. The lack of support can result in potential vulnerabilities.
+
+    Software and systems at unsupported servicing levels or releases will not receive security updates for new vulnerabilities, which leaves them subject to exploitation.
+
+    When maintenance updates and patches are no longer available, software is no longer considered supported and should be upgraded or decommissioned.
+  EOT
   desc 'check', <<~EOT
     If new packages are available for PostgreSQL, they can be reviewed in the package manager appropriate for the server operating system:
 

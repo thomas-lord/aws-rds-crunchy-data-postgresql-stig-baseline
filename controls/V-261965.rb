@@ -1,5 +1,10 @@
 control 'V-261965' do
   title 'PostgreSQL must implement NIST FIPS 140-2 or 140-3 validated cryptographic modules to generate and validate cryptographic hashes.'
+  desc <<~EOT
+    Use of weak or untested encryption algorithms undermines the purposes of using encryption to protect data. The application must implement cryptographic modules adhering to the higher standards approved by the federal government since this provides assurance they have been tested and validated.
+
+    For detailed information, refer to NIST FIPS Publication 140-3, Security Requirements For Cryptographic Modules. Note that the product's cryptographic modules must be validated and certified by NIST as FIPS compliant.
+  EOT
   desc 'check', <<~EOT
     As the system administrator, run the following to ensure FIPS is enabled:
 
