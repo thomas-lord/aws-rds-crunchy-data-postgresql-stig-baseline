@@ -47,8 +47,9 @@ module Inspec::Resources
     @session_cache = {}
     @kms_cache = {}
     @parameter_cache = {}
+    @security_group_cache = {}
     class << self
-      attr_reader :instance_cache, :session_cache, :kms_cache, :parameter_cache
+      attr_reader :instance_cache, :session_cache, :kms_cache, :parameter_cache, :security_group_cache
     end
 
     # InSpec's registry subclass calls super into this; it must not call super itself.
@@ -138,28 +139,28 @@ module Inspec::Resources
     # instance: [{ id:, sources: [...], group_refs: [...] }]. A rule counts when it allows all
     # traffic or TCP on a port range that includes the instance's port; rules for other ports
     # can't reach the database. sources are IPv4 CIDRs, IPv6 CIDRs and prefix-list IDs;
-    # group_refs are security groups the rules allow by reference.
+    # group_refs are security groups the rules allow by reference. Looked up once per scan
+    # (errors too), since two controls check the same groups.
     def security_group_ingress
-      # The instance's own port, not `port`, which may be a tunnel's local port.
-      db_port = (aws_attr('Endpoint', 'Port') || port).to_i
-      ids = (aws_attr('VpcSecurityGroups') || []).map { |g| g['VpcSecurityGroupId'] }.compact
-      ids.map do |id|
-        perms = aws_json(%W(ec2 describe-security-groups --group-ids #{id} --query SecurityGroups[0].IpPermissions)) || []
-        reaching = perms.select { |p| reaches_port?(p, db_port) }
-        sources = reaching.flat_map do |p|
-          (p['IpRanges'] || []).map { |r| r['CidrIp'] } +
-            (p['Ipv6Ranges'] || []).map { |r| r['CidrIpv6'] } +
-            (p['PrefixListIds'] || []).map { |r| r['PrefixListId'] }
-        end
-        group_refs = reaching.flat_map { |p| (p['UserIdGroupPairs'] || []).map { |g| g['GroupId'] } }
-        { id: id, sources: sources.compact.uniq, group_refs: group_refs.compact.uniq }
+      key = [@aws_instance_id, @region, @profile]
+      cache = AwsRdsConnection.security_group_cache
+      cache[key] ||= begin
+        { data: fetch_security_group_ingress }
+      rescue AwsRdsConnectionError => e
+        { error: e.message }
       end
+      raise AwsRdsConnectionError, cache[key][:error] if cache[key][:error]
+
+      cache[key][:data]
     end
 
-    # CloudWatch alarms on this instance's FreeStorageSpace metric.
+    # CloudWatch alarms on this instance's FreeStorageSpace metric. The instance is looked up
+    # first: CloudWatch doesn't check that it exists, so a wrong region or identifier would
+    # otherwise read as "no alarms" instead of failing with the RDS error.
     def free_storage_alarms
       return [] unless aws_available?
 
+      describe_instance
       aws_json(%W[cloudwatch describe-alarms-for-metric --namespace AWS/RDS --metric-name FreeStorageSpace
                   --dimensions Name=DBInstanceIdentifier,Value=#{@aws_instance_id} --query MetricAlarms]) || []
     end
@@ -260,6 +261,23 @@ module Inspec::Resources
       return false unless %w[tcp 6].include?(protocol)
 
       perm['FromPort'].to_i <= db_port && db_port <= perm['ToPort'].to_i
+    end
+
+    def fetch_security_group_ingress
+      # The instance's own port, not `port`, which may be a tunnel's local port.
+      db_port = (aws_attr('Endpoint', 'Port') || port).to_i
+      ids = (aws_attr('VpcSecurityGroups') || []).map { |g| g['VpcSecurityGroupId'] }.compact
+      ids.map do |id|
+        perms = aws_json(%W(ec2 describe-security-groups --group-ids #{id} --query SecurityGroups[0].IpPermissions)) || []
+        reaching = perms.select { |p| reaches_port?(p, db_port) }
+        sources = reaching.flat_map do |p|
+          (p['IpRanges'] || []).map { |r| r['CidrIp'] } +
+            (p['Ipv6Ranges'] || []).map { |r| r['CidrIpv6'] } +
+            (p['PrefixListIds'] || []).map { |r| r['PrefixListId'] }
+        end
+        group_refs = reaching.flat_map { |p| (p['UserIdGroupPairs'] || []).map { |g| g['GroupId'] } }
+        { id: id, sources: sources.compact.uniq, group_refs: group_refs.compact.uniq }
+      end
     end
 
     def describe_instance
