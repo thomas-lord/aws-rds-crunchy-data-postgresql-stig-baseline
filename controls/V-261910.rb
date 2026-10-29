@@ -44,7 +44,28 @@ control 'V-261910' do
   tag stig_id: 'CD16-00-006200'
   tag cci: ["CCI-002361"]
   tag nist: ["AC-12"]
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.'
+  conn = rds_connection
+  sql = conn.sql_session(input('pg_dba_password'))
+
+  # Whether sessions must time out is organization-defined. With pg_require_session_timeouts
+  # set, idle sessions and idle open transactions must both be terminated after a non-zero
+  # time; otherwise the current values are reported for manual review.
+  if input('pg_require_session_timeouts')
+    describe sql.query('SHOW idle_session_timeout;', [conn.db]) do
+      its('output.strip') { should match(/\A[1-9]\d*(us|ms|s|min|h|d)?\z/) }
+    end
+
+    describe sql.query('SHOW idle_in_transaction_session_timeout;', [conn.db]) do
+      its('output.strip') { should match(/\A[1-9]\d*(us|ms|s|min|h|d)?\z/) }
+    end
+
+    rds_check_parameter_apply_status(conn)
+  else
+    timeouts_sql = "SELECT name || ' = ' || setting || COALESCE(unit, '') FROM pg_settings WHERE name IN ('idle_session_timeout', 'idle_in_transaction_session_timeout') ORDER BY 1;"
+    current = sql.query(timeouts_sql, [conn.db]).lines.join(', ')
+    manual_note = "Manually verify against the organization's documented session-termination requirements (0 means no timeout): #{current}. Set pg_require_session_timeouts to check this automatically."
+    describe manual_note do
+      skip manual_note
+    end
   end
 end

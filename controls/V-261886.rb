@@ -31,7 +31,20 @@ control 'V-261886' do
   tag stig_id: 'CD16-00-003200'
   tag cci: ["CCI-000381"]
   tag nist: ["CM-7 a"]
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.'
+  conn = rds_connection
+  sql = conn.sql_session(input('pg_dba_password'))
+
+  # Extensions are installed per database, so every database is checked. plpgsql is built in.
+  approved = input('pg_approved_extensions')
+  extensions, unreadable = rds_query_each_database(conn, sql, "SELECT extname FROM pg_extension WHERE extname <> 'plpgsql' ORDER BY 1;", /\A[\w-]+\z/)
+  installed = extensions.map { |database, extension| "#{extension} (#{database})" }
+  unapproved = extensions.reject { |_, extension| approved.include?(extension) }.map { |database, extension| "#{extension} (#{database})" }
+  describe "Installed extensions besides plpgsql: #{installed.empty? ? 'none' : installed.join(', ')}" do
+    it 'should be readable in every database (the scan account needs CONNECT on each)' do
+      expect(unreadable).to be_empty
+    end
+    it 'should all be approved via the pg_approved_extensions input' do
+      expect(unapproved).to be_empty
+    end
   end
 end

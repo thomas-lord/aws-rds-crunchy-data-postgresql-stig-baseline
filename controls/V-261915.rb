@@ -60,7 +60,26 @@ control 'V-261915' do
   tag stig_id: 'CD16-00-006800'
   tag cci: ["CCI-002235"]
   tag nist: ["AC-6 (10)"]
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.'
+  conn = rds_connection
+  sql = conn.sql_session(input('pg_dba_password'))
+
+  # The automatable part: procedural languages other than plpgsql (e.g. plperl, plv8,
+  # plrust on RDS) need AO authorization, listed in pg_approved_procedural_languages.
+  approved = input('pg_approved_procedural_languages')
+  languages, unreadable = rds_query_each_database(conn, sql, "SELECT lanname FROM pg_language WHERE lanispl AND lanname <> 'plpgsql' ORDER BY 1;", /\A[\w-]+\z/)
+  installed = languages.map { |database, language| "#{language} (#{database})" }
+  unapproved = languages.reject { |_, language| approved.include?(language) }.map { |database, language| "#{language} (#{database})" }
+  describe "Procedural languages besides plpgsql: #{installed.empty? ? 'none' : installed.join(', ')}" do
+    it 'should be readable in every database (the scan account needs CONNECT on each)' do
+      expect(unreadable).to be_empty
+    end
+    it 'should all be AO-authorized via the pg_approved_procedural_languages input' do
+      expect(unapproved).to be_empty
+    end
+  end
+
+  manual_note = 'Manually verify that the system documentation defines which PostgreSQL functionality is privileged, and that the configuration (role grants, function privileges) protects all of it from nonprivileged users.'
+  describe manual_note do
+    skip manual_note
   end
 end

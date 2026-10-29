@@ -178,6 +178,32 @@ inputs:
   type: numeric
   value: 75
 
+- name: pg_approved_extensions
+  description: "Extensions approved to be installed in any database, besides the built-in plpgsql (V-261886). pgaudit is required by the audit controls"
+  type: array
+  value:
+    - "pgaudit"
+
+- name: pg_approved_procedural_languages
+  description: "Procedural languages besides plpgsql that the AO has authorized, e.g. [\"plperl\"] (V-261915)"
+  type: array
+  value: []
+
+- name: pg_approved_security_definer_functions
+  description: "SECURITY DEFINER functions documented and approved, as schema.function (V-261916). Functions in system schemas or belonging to an extension aren't checked"
+  type: array
+  value: []
+
+- name: pg_approved_schema_creators
+  description: "Roles besides the owner approved to hold CREATE on a schema or database, which lets them create functions, views and triggers (V-261923). PUBLIC is never approved unless listed"
+  type: array
+  value: []
+
+- name: pg_require_session_timeouts
+  description: "Whether the organization requires idle sessions to be terminated (V-261910). true checks that idle_session_timeout and idle_in_transaction_session_timeout are non-zero; false reports them for manual review"
+  type: boolean
+  value: false
+
 - name: pg_approved_ingress_cidrs
   description: "IPv4/IPv6 CIDR blocks and prefix-list IDs approved by the organization's PPSM CAL/vulnerability assessment to reach the database port (V-261889/V-261926). Any other source is a finding; 0.0.0.0/0 and ::/0 are always a finding"
   type: array

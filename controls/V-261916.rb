@@ -39,7 +39,31 @@ control 'V-261916' do
   tag stig_id: 'CD16-00-006900'
   tag cci: ["CCI-002233"]
   tag nist: ["AC-6 (8)"]
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.'
+  conn = rds_connection
+  sql = conn.sql_session(input('pg_dba_password'))
+
+  # SECURITY DEFINER functions run with their owner's privileges. System schemas and
+  # functions belonging to an extension are left out: extensions are approved under
+  # V-261886. Approval is by schema.function name, so it covers every overload.
+  approved = input('pg_approved_security_definer_functions')
+  secdef_sql = "SELECT n.nspname || '.' || p.proname || '|' || pg_get_userbyid(p.proowner) FROM pg_proc p " \
+               "JOIN pg_namespace n ON n.oid = p.pronamespace WHERE p.prosecdef AND n.nspname NOT IN ('pg_catalog', 'information_schema') " \
+               "AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e') ORDER BY 1;"
+  functions, unreadable = rds_query_each_database(conn, sql, secdef_sql, /\A[^|]+\|[^|]+\z/)
+  found = functions.map { |database, row| "#{row.split('|')[0]} owned by #{row.split('|')[1]} (#{database})" }
+  unapproved = functions.reject { |_, row| approved.include?(row.split('|')[0]) }
+                        .map { |database, row| "#{row.split('|')[0]} (#{database})" }
+  describe "SECURITY DEFINER functions outside system schemas and extensions: #{found.empty? ? 'none' : found.join(', ')}" do
+    it 'should be readable in every database (the scan account needs CONNECT on each)' do
+      expect(unreadable).to be_empty
+    end
+    it 'should all be documented and approved via the pg_approved_security_definer_functions input' do
+      expect(unapproved).to be_empty
+    end
+  end
+
+  manual_note = 'Manually verify that each approved SECURITY DEFINER function is implemented as documented and can be invoked only in the intended ways, contexts and by the intended roles (check its EXECUTE grants).'
+  describe manual_note do
+    skip manual_note
   end
 end

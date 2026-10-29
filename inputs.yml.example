@@ -62,3 +62,8 @@ pg_dba_password: '<password>'
 # pg_require_customer_managed_kms_key: false   # true needs kms:DescribeKey
 # pg_storage_alarm_threshold_percent: 75
 # pg_approved_ingress_cidrs: []
+# pg_approved_extensions: ['pgaudit']
+# pg_approved_procedural_languages: []
+# pg_approved_security_definer_functions: []   # as schema.function
+# pg_approved_schema_creators: []
+# pg_require_session_timeouts: false
