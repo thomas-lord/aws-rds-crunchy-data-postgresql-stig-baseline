@@ -2,13 +2,14 @@
 # Copy to inputs.yml and tailor to your environment:
 #   cp inputs.yml.example inputs.yml
 #
-# In most cases, the only section you need to fill in is "REQUIRED: database
-# info" below. Everything else already has a STIG-aligned default defined in
-# inspec.yml (log_connections=on, ssl=on, password_encryption=scram-sha-256,
-# pgaudit.log=[ddl,role,read,write], etc.) and is derived at run time from the
-# live database (via SQL `SHOW`) or AWS (via the `aws` CLI). Only add an
-# override below if your organization's documented System Security Plan
-# specifies a different value than the STIG default.
+# The "REQUIRED: database info" section below is all you need to connect.
+# Settings such as log_connections=on, ssl=on and password_encryption=
+# scram-sha-256 already have STIG-aligned defaults in inspec.yml; override one
+# only if your System Security Plan specifies a different value.
+#
+# The exception is the approval lists (pg_approved_* and the IAM check), which
+# record what your organization has documented and approved. Most start empty,
+# so fill them in before a real scan. INPUTS.md describes every input.
 
 # =====================================================================
 # REQUIRED: database info
@@ -66,5 +67,9 @@ pg_dba_password: '<password>'
 # pg_approved_extensions: ['pgaudit']
 # pg_approved_procedural_languages: []
 # pg_approved_security_definer_functions: []   # as schema.function
+# pg_audit_config_denied_principals: []   # non-admin IAM role/user ARNs; needs iam:SimulatePrincipalPolicy
+# pg_approved_admin_roles: []   # e.g. the master user
+# pg_approved_object_privileges: {}   # e.g. {app_user: [SELECT, INSERT, UPDATE, DELETE]}
+# pg_approved_password_roles: []   # login roles not using IAM or Kerberos
 # pg_approved_schema_creators: []
 # pg_require_session_timeouts: false

@@ -183,6 +183,20 @@ module Inspec::Resources
                   --query DBEngineVersions[0].ValidUpgradeTarget[?IsMajorVersionUpgrade==`false`].EngineVersion]) || []
     end
 
+    # IAM policy simulation of whether a role or user ARN may change this instance's audit
+    # settings: its DB parameter group (pgaudit and logging parameters) or the instance itself
+    # (which group is attached, log exports). Returns [[action, decision], ...], where decision
+    # is "allowed", "implicitDeny" or "explicitDeny"; raises on failure, e.g. without
+    # iam:SimulatePrincipalPolicy permission.
+    def audit_config_decisions(principal_arn)
+      db_arn = describe_instance['DBInstanceArn'].to_s
+      pg_arn = db_arn.sub(/:db:[^:]+\z/, ":pg:#{describe_instance.dig('DBParameterGroups', 0, 'DBParameterGroupName')}")
+      { pg_arn => %w[rds:ModifyDBParameterGroup rds:ResetDBParameterGroup], db_arn => %w[rds:ModifyDBInstance] }.flat_map do |arn, actions|
+        aws_json(%W[iam simulate-principal-policy --policy-source-arn #{principal_arn} --resource-arns #{arn}
+                    --query EvaluationResults[].[EvalActionName,EvalDecision] --action-names] + actions) || []
+      end
+    end
+
     # Who manages a KMS key: "CUSTOMER" for a customer-managed key, "AWS" for an
     # AWS-managed one such as aws/rds. Looked up once per key per scan (errors too);
     # raises on failure, e.g. without kms:DescribeKey permission.
