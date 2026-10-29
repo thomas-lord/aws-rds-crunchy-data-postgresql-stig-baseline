@@ -58,7 +58,39 @@ control 'V-261923' do
   tag cci: ["CCI-001812"]
   # CCI-001812 has no NIST SP 800-53 Rev 5 mapping in the DISA CCI list (2025-01-23); Rev 4 reference used.
   tag nist: ["CM-11 (2)"]
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.'
+  conn = rds_connection
+  sql = conn.sql_session(input('pg_dba_password'))
+
+  # Who besides an owner can create logic modules: CREATE on a schema lets a role add
+  # functions, views and triggers there, and CREATE on a database lets it make schemas of
+  # its own. Grants to PUBLIC or to roles not in pg_approved_schema_creators are flagged.
+  # Owners always can, and are the manual part below; rds_superuser holders, who can do
+  # anything, are checked by V-261924.
+  approved = input('pg_approved_schema_creators')
+  grantee_sql = "CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END"
+  schema_sql = "SELECT n.nspname || '|' || #{grantee_sql} FROM pg_namespace n, aclexplode(n.nspacl) a " \
+               "WHERE a.privilege_type = 'CREATE' AND a.grantee <> n.nspowner AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' ORDER BY 1;"
+  schema_grants, unreadable = rds_query_each_database(conn, sql, schema_sql, /\A[^|]+\|[^|]+\z/)
+  database_sql = "SELECT d.datname || '|' || #{grantee_sql} FROM pg_database d, aclexplode(d.datacl) a " \
+                 "WHERE a.privilege_type = 'CREATE' AND a.grantee <> d.datdba AND d.datname <> 'rdsadmin' ORDER BY 1;"
+  database_rows = sql.query(database_sql, [conn.db]).lines
+  unreadable += ['(database privileges)'] unless database_rows.all? { |row| row =~ /\A[^|]+\|[^|]+\z/ }
+
+  grants = schema_grants.map { |database, row| ["schema #{database}.#{row.split('|')[0]}", row.split('|')[1]] } +
+           database_rows.grep(/\A[^|]+\|[^|]+\z/).map { |row| ["database #{row.split('|')[0]}", row.split('|')[1]] }
+  found = grants.map { |object, grantee| "#{grantee} on #{object}" }
+  unapproved = grants.reject { |_, grantee| approved.include?(grantee) }.map { |object, grantee| "#{grantee} on #{object}" }
+  describe "CREATE on schemas and databases granted to non-owners: #{found.empty? ? 'none' : found.join(', ')}" do
+    it 'should be readable in every database (the scan account needs CONNECT on each)' do
+      expect(unreadable).to be_empty
+    end
+    it 'should not be granted to PUBLIC or roles missing from the pg_approved_schema_creators input' do
+      expect(unapproved).to be_empty
+    end
+  end
+
+  manual_note = 'Manually verify that the roles owning databases and schemas, which can always create objects in them, are administrative roles documented as approved. (Not a finding if this instance only supports development or experimentation.)'
+  describe manual_note do
+    skip manual_note
   end
 end

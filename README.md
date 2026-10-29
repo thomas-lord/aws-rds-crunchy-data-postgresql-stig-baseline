@@ -68,10 +68,16 @@ GRANT pg_read_all_settings TO stig_audit;
 
 If the account lacks `pg_read_all_settings`, every SQL control fails with a message saying so, before any check runs.
 The connection limit keeps the account from failing V-261857 itself. Don't grant it `rds_superuser`: V-261924 would
-flag it.
+flag it. Extensions, functions and schema privileges are checked in every database, so the account also needs
+`CONNECT` on each one. PUBLIC has it by default, so this only matters where it was revoked.
 
 Every other input has a STIG-aligned default. Change one only if your System Security Plan specifies a different
 value. [inputs.yml.example](inputs.yml.example) lists them all, and [inspec.yml](inspec.yml) describes each one.
+
+Some inputs are approval lists: anything the scan finds that isn't listed is a finding. They cover extensions
+(`pg_approved_extensions`, default `pgaudit`), procedural languages, `SECURITY DEFINER` functions, roles allowed to
+create objects in schemas and databases (`pg_approved_schema_creators`), `rds_superuser` holders and security group
+sources. Each finding names what to add, and listing it records the approval in your inputs file.
 
 ## How it works
 
@@ -91,10 +97,10 @@ log export, alarms, maintenance, IAM auth) call the AWS CLI.
 | Checked by | Controls |
 |---|---|
 | SQL: pgaudit loaded and logging the required classes | 29 |
-| SQL: database settings, superusers, SSL, version | 24 |
+| SQL: database settings, superusers, extensions, privileges, SSL, version | 28 |
 | AWS CLI: security groups, log export, IAM auth, storage, alarms, maintenance | 8 |
 | AWS CLI + SQL: encryption at rest | 3 |
-| Manual review (needs organizational policy, documents or an IAM review) | 36 |
+| Manual review (needs organizational policy, documents or an IAM review) | 32 |
 | Not applicable on RDS (AWS manages the OS and FIPS) | 11 |
 
 Automated controls also flag any part they can't settle on their own for manual review, such as whether a CIDR is

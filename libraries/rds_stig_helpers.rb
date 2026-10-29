@@ -64,6 +64,33 @@ module RdsStigHelpers
     end
   end
 
+  # Databases the per-database checks visit: every one that accepts connections except
+  # rdsadmin, AWS's own, which customers can't connect to. template1 is included because new
+  # databases copy its objects.
+  DATABASES_SQL = "SELECT datname FROM pg_database WHERE datallowconn AND datname <> 'rdsadmin' ORDER BY 1;".freeze
+
+  # Runs query in every database (see DATABASES_SQL) and returns [rows, unreadable]: rows
+  # holds a [database, row] pair for each output row matching row_pattern, and unreadable
+  # names each database (or the database list) whose output had anything else, such as a
+  # connection or permission error. Objects such as extensions and functions are per
+  # database, so checking only pg_db would miss the others.
+  def rds_query_each_database(conn, sql, query, row_pattern)
+    databases = sql.query(DATABASES_SQL, [conn.db]).lines
+    return [[], ['(list of databases)']] if databases.empty? || databases.any? { |d| d =~ /\A(psql:|ERROR:|FATAL:)/i }
+
+    rows = []
+    unreadable = []
+    databases.each do |database|
+      lines = sql.query(query, [database]).lines
+      if lines.all? { |line| line =~ row_pattern }
+        rows.concat(lines.map { |line| [database, line] })
+      else
+        unreadable << database
+      end
+    end
+    [rows, unreadable]
+  end
+
   # Disk-level encryption at rest (V-261901, V-261930, V-261931). On RDS this is storage
   # encryption with a KMS key, which covers the data volume, automated backups, snapshots
   # and read replicas. With pg_require_customer_managed_kms_key set, the key must also be
