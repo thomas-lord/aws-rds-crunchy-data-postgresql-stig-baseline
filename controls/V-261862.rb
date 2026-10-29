@@ -47,7 +47,34 @@ control 'V-261862' do
   tag stig_id: 'CD16-00-000600'
   tag cci: ["CCI-000171"]
   tag nist: ["AU-12 b"]
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.'
+  conn = rds_connection
+  sql = conn.sql_session(input('pg_dba_password'))
+
+  # PGDATA ownership is inherited from AWS: customers have no file system access on RDS.
+  # Which events are audited is set in the instance's DB parameter group, so who can change it
+  # is an IAM question. Each role or user ARN in pg_audit_config_denied_principals (accounts not
+  # appointed by the ISSM) is simulated against the actions that change it, and must be denied.
+  # RDS always has a superuser (rdsadmin), so an empty superuser list means the query didn't run.
+  checks = [
+    rds_check("Superusers (approved: #{input('pg_superusers').join(', ')})") do
+      rows = sql.query('SELECT rolname FROM pg_roles WHERE rolsuper = true;', [conn.db]).lines
+      [!rows.empty? && (rows - input('pg_superusers')).empty?, rows.empty? ? 'none (query did not run)' : rows.join(', ')]
+    end
+  ]
+  principals = input('pg_audit_config_denied_principals')
+  manual_note = nil
+  if principals.empty? || !conn.aws_available?
+    manual_note = 'Manually verify that only personnel appointed by the ISSM can change the DB parameter group (pgaudit and logging parameters) or the instance (rds:ModifyDBParameterGroup, rds:ResetDBParameterGroup, rds:ModifyDBInstance), ' \
+                  'e.g. with aws iam simulate-principal-policy for a non-appointed role. List such roles or users in pg_audit_config_denied_principals to check this automatically.'
+  else
+    checks << rds_check('IAM roles and users not appointed by the ISSM (pg_audit_config_denied_principals) denied changing audit settings') do
+      results = principals.map { |arn| [arn, conn.audit_config_decisions(arn)] }
+      allowed = results.flat_map { |arn, decisions| decisions.select { |_, decision| decision == 'allowed' }.map { |action, _| "#{arn} #{action}" } }
+      found = results.map { |arn, decisions| "#{arn}: #{decisions.map { |action, decision| "#{action.delete_prefix('rds:')} #{decision}" }.join(', ')}" }
+      [allowed.empty?, allowed.empty? ? found.join('; ') : "allowed: #{allowed.join(', ')}"]
+    end
+  end
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
 end

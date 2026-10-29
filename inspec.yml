@@ -87,7 +87,7 @@ inputs:
 # System Security Plan specifies a different value.
 # =====================================================================
 - name: pg_superusers
-  description: "Authorized superuser accounts (e.g., AWS RDS 'rdsadmin')"
+  description: "Authorized superuser accounts (V-261862, V-261924), e.g. AWS RDS 'rdsadmin'"
   type: array
   value:
     - "rdsadmin"
@@ -120,12 +120,12 @@ inputs:
   value: "%m:%r:%u@%d:[%p]:%l:%e:%s:%v:%x:%c:%q%a:"
 
 - name: pg_log_connections
-  description: "Expected value of log_connections (V-261866/956/961/964)"
+  description: "Expected value of log_connections (V-261866/956/957/960/961)"
   type: string
   value: "on"
 
 - name: pg_log_disconnections
-  description: "Expected value of log_disconnections (V-261866/961/964)"
+  description: "Expected value of log_disconnections (V-261866/957/960/961)"
   type: string
   value: "on"
 
@@ -191,6 +191,26 @@ inputs:
 
 - name: pg_approved_security_definer_functions
   description: "SECURITY DEFINER functions documented and approved, as schema.function (V-261916). Functions in system schemas or belonging to an extension aren't checked"
+  type: array
+  value: []
+
+- name: pg_audit_config_denied_principals
+  description: "IAM role or user ARNs not appointed by the ISSM to select audited events (V-261862). Each is simulated against changing the DB parameter group or instance and must be denied; needs iam:SimulatePrincipalPolicy. Empty leaves this part a manual review"
+  type: array
+  value: []
+
+- name: pg_approved_admin_roles
+  description: "Roles documented and approved to hold SUPERUSER, CREATEROLE, CREATEDB, BYPASSRLS or REPLICATION (V-261859). On RDS the master user has CREATEROLE and CREATEDB, so list it"
+  type: array
+  value: []
+
+- name: pg_approved_object_privileges
+  description: "Privileges each role is documented and approved to hold on tables, views, sequences and their columns it doesn't own, in every database (V-261859), e.g. {app_user: [SELECT, INSERT, UPDATE, DELETE]}. Use PUBLIC for grants to everyone"
+  type: Hash
+  value: {}
+
+- name: pg_approved_password_roles
+  description: "Login roles documented and approved to authenticate by password instead of IAM database authentication (rds_iam) or Kerberos (rds_ad) (V-261858). Usually the master user, the audit account and application accounts"
   type: array
   value: []
 

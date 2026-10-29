@@ -56,7 +56,7 @@ Style/HashSyntax:
 # Ceilings for library code, set just above today's largest methods so runaway growth
 # is still flagged.
 Metrics/ClassLength:
-  Max: 200
+  Max: 220
 Metrics/ModuleLength:
   Max: 150
 Metrics/MethodLength:

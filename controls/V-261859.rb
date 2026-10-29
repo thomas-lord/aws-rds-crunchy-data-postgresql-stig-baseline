@@ -146,7 +146,53 @@ control 'V-261859' do
   tag stig_id: 'CD16-00-000300'
   tag cci: ["CCI-000213"]
   tag nist: ["AC-3"]
-  describe 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.' do
-    skip 'This control requires manual review: it depends on organization-defined policy, documented procedures, and/or artifacts (e.g., system security plan, PPSM CAL, access control documentation, AWS Console/CloudWatch configuration) that cannot be verified via an automated SQL session or the AWS CLI alone.'
+  conn = rds_connection
+  sql = conn.sql_session(input('pg_dba_password'))
+
+  # The documented authorizations are the approval inputs: pg_approved_admin_roles for role
+  # attributes (\du) and pg_approved_object_privileges for grants on tables, views, sequences
+  # and their columns (\dp), checked in every database. pg_hba.conf can't be read on RDS; its
+  # authentication methods are covered by V-261858 (password vs IAM/Kerberos) and V-261892 (SCRAM).
+  attribute_sql = "SELECT rolname || '|' || concat_ws(',', CASE WHEN rolsuper THEN 'SUPERUSER' END, CASE WHEN rolcreaterole THEN 'CREATEROLE' END, " \
+                  "CASE WHEN rolcreatedb THEN 'CREATEDB' END, CASE WHEN rolbypassrls THEN 'BYPASSRLS' END, CASE WHEN rolreplication THEN 'REPLICATION' END) " \
+                  "FROM pg_roles WHERE (rolsuper OR rolcreaterole OR rolcreatedb OR rolbypassrls OR rolreplication) AND rolname !~ '^pg_' AND rolname <> 'rdsadmin' ORDER BY 1;"
+  grantee_sql = "CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END"
+  user_schema_sql = "n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'"
+  grant_sql = "SELECT grantee || '|' || privilege || '|' || count(DISTINCT object) FROM (" \
+              "SELECT #{grantee_sql} AS grantee, a.privilege_type AS privilege, c.oid AS object " \
+              "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace, aclexplode(c.relacl) a " \
+              "WHERE c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f') AND a.grantee <> c.relowner AND #{user_schema_sql} " \
+              "AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.deptype = 'e') " \
+              "UNION ALL SELECT #{grantee_sql}, a.privilege_type || ' (columns)', c.oid " \
+              "FROM pg_attribute t JOIN pg_class c ON c.oid = t.attrelid JOIN pg_namespace n ON n.oid = c.relnamespace, aclexplode(t.attacl) a " \
+              "WHERE a.grantee <> c.relowner AND #{user_schema_sql}) g GROUP BY grantee, privilege ORDER BY 1;"
+
+  approved_admins = input('pg_approved_admin_roles')
+  approved_privileges = input('pg_approved_object_privileges').to_h { |role, privileges| [role.to_s, Array(privileges).map(&:upcase)] }
+  checks = [
+    rds_check('Roles with SUPERUSER, CREATEROLE, CREATEDB, BYPASSRLS or REPLICATION, approved via pg_approved_admin_roles') do
+      rows = sql.query(attribute_sql, [conn.db]).lines
+      raise rows.join(' ') unless rows.all? { |row| row =~ /\A[^|]+\|[A-Z,]+\z/ }
+
+      found = rows.map { |row| "#{row.split('|')[0]} (#{row.split('|')[1]})" }
+      unapproved = rows.map { |row| row.split('|')[0] } - approved_admins
+      [unapproved.empty?, rds_approval_summary(found, unapproved)]
+    end
+  ]
+  grants, unreadable = rds_query_each_database(conn, sql, grant_sql, /\A[^|]+\|[^|]+\|\d+\z/)
+  checks << rds_check('Databases readable (the scan account needs CONNECT on each)') { [unreadable.empty?, unreadable.empty? ? 'all' : "unreadable: #{unreadable.join(', ')}"] }
+  checks << rds_check('Privileges on tables, views, sequences and columns granted to non-owners, approved via pg_approved_object_privileges') do
+    found = []
+    unapproved = []
+    grants.each do |database, row|
+      grantee, privilege, count = row.split('|')
+      entry = "#{grantee} #{privilege} on #{count} in #{database}"
+      found << entry
+      unapproved << entry unless approved_privileges.fetch(grantee, []).include?(privilege.delete_suffix(' (columns)'))
+    end
+    [unapproved.empty?, rds_approval_summary(found, unapproved)]
+  end
+  rds_review_results(checks, nil).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
 end
