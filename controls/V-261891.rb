@@ -54,13 +54,14 @@ control 'V-261891' do
 
   # Roles whose stored password isn't a SCRAM-SHA-256 hash, e.g. md5 hashes from before
   # password_encryption was changed. Roles with no password (IAM-only roles) are left out:
-  # they have nothing stored. If this login can't read pg_shadow, that part becomes a
-  # manual review; any other query error fails the control.
+  # they have nothing stored. On RDS no customer role can read pg_shadow, not even the
+  # master user (permission denied, checked on RDS PostgreSQL 17.11), so there this part is
+  # a manual review. Elsewhere it runs, and any other query error fails the control.
   checks = [rds_setting_check(conn, sql, 'password_encryption', input('pg_password_encryption')), rds_apply_status_check(conn)]
   manual_note = nil
   stored_passwords = sql.query("SELECT usename FROM pg_shadow WHERE passwd IS NOT NULL AND passwd NOT LIKE 'SCRAM-SHA-256%';", [conn.db])
   if stored_passwords.output =~ /permission denied/i
-    manual_note = "#{conn.dba} cannot read pg_shadow, so stored password hashes were not checked. Manually check them as a role that can read pg_shadow (whether the master user can on RDS has not been verified): every role with a stored password must have a SCRAM-SHA-256 hash. If no role can, confirm every password was set or reset while password_encryption was scram-sha-256; with rds.accepted_password_auth_method set to scram (V-261892), roles with older hashes cannot log in."
+    manual_note = "#{conn.dba} cannot read pg_shadow, so stored password hashes were not checked. On RDS no customer role can read it, not even the master user, so the hashes cannot be checked directly. Manually confirm every password-authenticated role had its password set or reset while password_encryption was scram-sha-256. With rds.accepted_password_auth_method set to scram (V-261892), a role whose stored hash is older cannot log in."
   else
     checks << rds_check('Roles with a stored password that is not a SCRAM-SHA-256 hash') do
       output = stored_passwords.output.strip
