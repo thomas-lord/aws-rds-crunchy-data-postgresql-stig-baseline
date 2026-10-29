@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
-  Low-cost, single-AZ RDS for PostgreSQL 16 instance for testing the STIG profile.
+  Low-cost, single-AZ RDS for PostgreSQL 16 or 17 instance for testing the STIG profile.
   Creates its own VPC, reachable only from AllowedCidr. Not for production:
   no automated backups, no deletion protection, and deleting the stack deletes
   the database without a final snapshot.
@@ -29,8 +29,11 @@ Parameters:
   EngineVersion:
     Type: String
     Default: '16'
-    Description: PostgreSQL 16 version; '16' lets RDS pick the current default minor version.
-    AllowedPattern: '^16(\.\d+)?$'
+    Description: >-
+      PostgreSQL 16 or 17, as a major version ('17') to let RDS pick the current default
+      minor version, or a full version ('17.9').
+    AllowedPattern: '^1[67](\.\d+)?$'
+    ConstraintDescription: Must be 16 or 17, optionally with a minor version.
   DBInstanceClass:
     Type: String
     Default: db.t4g.micro
@@ -130,7 +133,7 @@ Resources:
     Type: AWS::RDS::DBParameterGroup
     Condition: UseStigParameters
     Properties:
-      Family: postgres16
+      Family: !Join ['', [postgres, !Select [0, !Split ['.', !Ref EngineVersion]]]]
       Description: STIG-aligned settings for profile testing
       Parameters:
         shared_preload_libraries: pg_stat_statements,pgaudit
