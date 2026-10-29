@@ -61,4 +61,6 @@ control 'V-261889' do
   end
 
   rds_check_security_group_ingress(groups)
+
+  rds_check_public_access(conn)
 end

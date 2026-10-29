@@ -91,6 +91,18 @@ module RdsStigHelpers
     [rows, unreadable]
   end
 
+  # PubliclyAccessible gives the endpoint a public IP, leaving security groups as the only
+  # barrier. Acceptable only as a documented exception, set with pg_public_access_approved.
+  # Callers must assert something in a describe of their own (see inspec check note above).
+  def rds_check_public_access(conn)
+    return if input('pg_public_access_approved')
+
+    describe 'RDS instance public accessibility (PubliclyAccessible)' do
+      subject { conn.aws_instance_attr('PubliclyAccessible') }
+      it { should cmp false }
+    end
+  end
+
   # Disk-level encryption at rest (V-261901, V-261930, V-261931). On RDS this is storage
   # encryption with a KMS key, which covers the data volume, automated backups, snapshots
   # and read replicas. With pg_require_customer_managed_kms_key set, the key must also be
