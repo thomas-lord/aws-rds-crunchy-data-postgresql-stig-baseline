@@ -128,8 +128,11 @@ DISA publishes this STIG as manual-only (no SCAP content), so SCC can't scan it.
 ## Source of truth
 
 - **Requirement text** (title, vulnerability discussion, check, fix, severity, CCI, SRG, STIG ID) is copied verbatim
-  from the DISA V1R3 benchmark. Only how each check is automated is this profile's own work. The vulnerability
-  discussion uses one-argument `desc`, not `desc 'default', ...`, because `inspec check` only recognizes that form.
+  from the DISA V1R3 benchmark,
+  [U_CD_Postgres_16_V1R3_STIG.zip](https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_CD_Postgres_16_V1R3_STIG.zip)
+  (SHA-256 `2970f7d32e18dce3f0d83739a85943927cf64c5373f58cb100d8889b0ba29a28`; DISA lists it as "CD Postgres 16").
+  Only how each check is automated is this profile's own work. The vulnerability discussion uses one-argument `desc`,
+  not `desc 'default', ...`, because `inspec check` only recognizes that form.
 - **NIST SP 800-53 tags** come from each control's CCI in the DISA CCI list (2025-01-23), using Revision 5. Four CCIs
   have no Rev 5 mapping (CCI-000196, CCI-001812, CCI-001814, CCI-001844); those controls use Rev 4 and are commented.
 - The profile is standalone: it doesn't include controls from any other InSpec baseline.
