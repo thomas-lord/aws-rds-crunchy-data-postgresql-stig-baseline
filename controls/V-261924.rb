@@ -45,39 +45,34 @@ control 'V-261924' do
   conn = rds_connection
   sql = conn.sql_session(input('pg_dba_password'))
 
-  unauthorized_superusers_sql = "SELECT rolname FROM pg_roles WHERE rolsuper = true;"
-  # RDS always has at least one superuser (rdsadmin), so an empty result means the
-  # query didn't actually run -- don't let `all` pass vacuously over an empty list.
-  describe sql.query(unauthorized_superusers_sql, [conn.db]).lines do
-    it { should_not be_empty }
-    it { should all(be_in input('pg_superusers')) }
-  end
+  # RDS always has at least one superuser (rdsadmin), so an empty result means the query
+  # didn't actually run -- an empty list must not pass.
+  checks = [
+    rds_check("Superusers (approved: #{input('pg_superusers').join(', ')})") do
+      rows = sql.query('SELECT rolname FROM pg_roles WHERE rolsuper = true;', [conn.db]).lines
+      [!rows.empty? && (rows - input('pg_superusers')).empty?, rows.empty? ? 'none (query did not run)' : rows.join(', ')]
+    end
+  ]
+  manual_note = 'Manually review database and schema privileges (\\l and \\dn+ output) for unauthorized update ("W") or create ("C") grants; this needs an organization-defined authorization matrix.'
 
   # On RDS the master user and anyone granted rds_superuser have nearly superuser powers
   # without the SUPERUSER flag, so the check above can't see them. Every role holding
   # rds_superuser, directly or through another role, must be the instance's master user
   # (created with the instance; RDS always makes it a member) or listed in
-  # pg_rds_superusers. True superusers such as rdsadmin are covered above. The master
-  # user's name comes from AWS (MasterUsername), not from pg_dba_user, so scanning as another
-  # account can't approve that account by mistake; without AWS discovery this part is a
-  # manual review.
+  # pg_rds_superusers. The master user's name comes from AWS (MasterUsername), not from
+  # pg_dba_user, so scanning as another account can't approve that account by mistake;
+  # without AWS discovery this part is a manual review.
   if conn.aws_available?
-    rds_superusers_sql = "SELECT r.rolname FROM pg_roles r WHERE pg_has_role(r.oid, 'rds_superuser', 'MEMBER') AND NOT r.rolsuper AND r.rolname <> 'rds_superuser';"
     approved_rds_superusers = input('pg_rds_superusers') + [conn.aws_instance_attr('MasterUsername')].compact
-    describe "Roles holding rds_superuser (approved: #{approved_rds_superusers.join(', ')})" do
-      subject { sql.query(rds_superusers_sql, [conn.db]).lines }
+    checks << rds_check("Roles holding rds_superuser (approved: #{approved_rds_superusers.join(', ')})") do
+      rows = sql.query("SELECT r.rolname FROM pg_roles r WHERE pg_has_role(r.oid, 'rds_superuser', 'MEMBER') AND NOT r.rolsuper AND r.rolname <> 'rds_superuser';", [conn.db]).lines
       # The master user is always a member, so an empty result means the query didn't run.
-      it { should_not be_empty }
-      it { should all(be_in approved_rds_superusers) }
+      [!rows.empty? && (rows - approved_rds_superusers).empty?, rows.empty? ? 'none (query did not run)' : rows.join(', ')]
     end
   else
-    manual_note = 'Without AWS CLI discovery (aws_db_instance_identifier + aws CLI) the instance\'s master user cannot be identified, so rds_superuser membership is not checked automatically. Manually confirm that every role holding rds_superuser (directly or through another role) is the master user or is approved by the organization.'
-    describe manual_note do
-      skip manual_note
-    end
+    manual_note += ' Without AWS CLI discovery the master user cannot be identified, so also confirm that every role holding rds_superuser (directly or through another role) is the master user or approved by the organization.'
   end
-
-  describe 'Manually review database/schema-level privileges (\\l and \\dn+ output) for unauthorized update ("W") or create ("C") grants; this portion cannot be fully automated without an organization-defined authorization matrix.' do
-    skip 'Manually review database/schema-level privileges (\\l and \\dn+ output) for unauthorized update ("W") or create ("C") grants; this portion cannot be fully automated without an organization-defined authorization matrix.'
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
 end

@@ -35,8 +35,8 @@ Install these on the runner host, which needs network access to the RDS instance
 | `saf` CLI | Converting results to `.ckl` (optional) | `npm install -g @mitre/saf` |
 
 The AWS credentials need read-only access to `rds:DescribeDBInstances`, `rds:DescribeDBParameters`,
-`rds:DescribePendingMaintenanceActions`, `ec2:DescribeSecurityGroups` and `cloudwatch:DescribeAlarmsForMetric`, plus
-`kms:DescribeKey` if you set `pg_require_customer_managed_kms_key`.
+`rds:DescribeDBEngineVersions`, `rds:DescribePendingMaintenanceActions`, `ec2:DescribeSecurityGroups` and
+`cloudwatch:DescribeAlarmsForMetric`, plus `kms:DescribeKey` if you set `pg_require_customer_managed_kms_key`.
 
 ## Inputs
 
@@ -91,6 +91,10 @@ log export, alarms, maintenance, IAM auth) call the AWS CLI.
   skipped. If AWS is configured but a call fails (expired credentials, missing permission, wrong region), they fail.
 - **Pending parameter changes are flagged.** SQL controls report the live database value. If the instance's
   parameter group is `pending-reboot`, they also flag that the live value may not match the configured one.
+- **Passed means fully checked.** A control whose automated checks pass but that still needs a person (to confirm
+  something is documented, approved, or set up a certain way) reports **Not Reviewed**, never Passed. Its result
+  lists what each automated check found and what is left to review. If an automated check fails, the control is
+  **Failed**, with the manual step listed too.
 
 ### Control coverage
 
@@ -103,8 +107,10 @@ log export, alarms, maintenance, IAM auth) call the AWS CLI.
 | Manual review (needs organizational policy, documents or an IAM review) | 32 |
 | Not applicable on RDS (AWS manages the OS and FIPS) | 11 |
 
-Automated controls also flag any part they can't settle on their own for manual review, such as whether a CIDR is
-approved in the PPSM CAL.
+Ten of the automated controls also have a manual step, so a compliant instance shows them as Not Reviewed with the
+automated results attached. Scanned with AWS discovery, a compliant instance comes out as 58 Passed and 53 Not Reviewed
+(the 43 manual and not-applicable controls plus those 10). Without AWS discovery, more controls become Not Reviewed,
+since the parts only AWS can answer turn into manual steps.
 
 ## Producing a `.ckl` for eMASS
 

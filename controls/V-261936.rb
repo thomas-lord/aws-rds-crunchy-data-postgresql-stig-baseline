@@ -47,13 +47,35 @@ control 'V-261936' do
   conn = rds_connection
   rds_only_if_aws(conn)
 
-  describe "RDS engine version #{conn.aws_instance_attr('EngineVersion')} (AutoMinorVersionUpgrade: #{conn.aws_instance_attr('AutoMinorVersionUpgrade')})" do
-    subject { conn.aws_instance_attr('EngineVersion') }
-    it { should_not be_nil }
-  end
-
-  describe 'RDS pending maintenance actions for this instance' do
-    subject { conn.pending_maintenance_actions }
-    it { should be_empty }
+  # The STIG: "If PostgreSQL is not at the latest version, this is a finding." On RDS the
+  # latest is the newest minor version RDS offers for the running major version. With
+  # automatic minor version upgrades on, RDS moves the instance forward on its own in the
+  # maintenance window, so that also passes. RDS only upgrades automatically to the version
+  # AWS marks as the automatic-upgrade target, which can lag the newest release; the result
+  # says so.
+  checks = [
+    rds_check('RDS engine minor version (the latest RDS offers, or automatic minor version upgrades on)') do
+      version = conn.aws_instance_attr('EngineVersion')
+      newer = conn.newer_minor_versions
+      auto_upgrade = conn.aws_instance_attr('AutoMinorVersionUpgrade') == true
+      found =
+        if newer.empty?
+          "#{version}, the latest"
+        elsif auto_upgrade
+          "#{version}, newer available: #{newer.join(', ')}. AutoMinorVersionUpgrade is on, so RDS upgrades the instance " \
+            "during its maintenance window (#{conn.aws_instance_attr('PreferredMaintenanceWindow')}) once AWS makes a newer " \
+            'version the automatic-upgrade target'
+        else
+          "#{version}, newer available: #{newer.join(', ')}. AutoMinorVersionUpgrade is off"
+        end
+      [newer.empty? || auto_upgrade, found]
+    end,
+    rds_check('RDS pending maintenance actions') do
+      actions = conn.pending_maintenance_actions.flat_map { |resource| (resource['PendingMaintenanceActionDetails'] || []).map { |detail| detail['Action'] } }
+      [actions.empty?, actions.empty? ? 'none' : actions.join(', ')]
+    end
+  ]
+  rds_review_results(checks, nil).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
 end

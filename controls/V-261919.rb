@@ -48,15 +48,27 @@ control 'V-261919' do
   conn = rds_connection
   rds_only_if_aws(conn)
 
-  describe 'CloudWatch alarms on the instance FreeStorageSpace metric' do
-    subject { conn.free_storage_alarms.map { |alarm| alarm['AlarmName'] } }
-    it { should_not be_empty }
-  end
-
-  # Build the message outside the describe block: inside one, `input` defines an
-  # RSpec example rather than returning the input's value.
-  manual_note = "Manually verify that the CloudWatch alarm(s) listed above (or an equivalent mechanism) notify appropriate support staff once free storage drops below the organization-defined threshold (default #{input('pg_storage_alarm_threshold_percent')} percent utilized)."
-  describe manual_note do
-    skip manual_note
+  # The STIG wants support staff warned once storage is threshold-percent used (75 by
+  # default). An alarm counts if it has actions enabled and at least one action (e.g. an
+  # SNS topic), and fires while free storage is at or above (100 - threshold) percent of the
+  # allocated storage.
+  threshold_percent = input('pg_storage_alarm_threshold_percent').to_f
+  checks = [
+    rds_check("CloudWatch alarms on FreeStorageSpace that notify someone by #{threshold_percent.round}% used") do
+      min_free_bytes = conn.aws_instance_attr('AllocatedStorage').to_f * (1024**3) * (100 - threshold_percent) / 100
+      alarms = conn.free_storage_alarms
+      notifying = alarms.select do |alarm|
+        alarm['ActionsEnabled'] && !Array(alarm['AlarmActions']).empty? &&
+          %w[LessThanThreshold LessThanOrEqualToThreshold].include?(alarm['ComparisonOperator']) &&
+          alarm['Threshold'].to_f >= min_free_bytes
+      end
+      others = alarms.map { |alarm| alarm['AlarmName'] } - notifying.map { |alarm| alarm['AlarmName'] }
+      [!notifying.empty?, "#{notifying.empty? ? 'none' : notifying.map { |alarm| alarm['AlarmName'] }.join(', ')}" \
+                          "#{others.empty? ? '' : "; not counted (no actions, or threshold too low): #{others.join(', ')}"}"]
+    end
+  ]
+  manual_note = 'Manually verify that the alarm actions listed above (e.g. SNS topic subscriptions) reach appropriate support staff, at a minimum the ISSO and the DBA/SA.'
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
 end

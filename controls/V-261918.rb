@@ -26,12 +26,15 @@ control 'V-261918' do
   conn = rds_connection
   rds_only_if_aws(conn)
 
-  describe "RDS allocated storage (AllocatedStorage: #{conn.aws_instance_attr('AllocatedStorage')} GiB, MaxAllocatedStorage: #{conn.aws_instance_attr('MaxAllocatedStorage') || 'unset - storage autoscaling disabled'})" do
-    subject { conn.aws_instance_attr('AllocatedStorage') }
-    it { should cmp > 0 }
-  end
-
-  describe 'Verify (from the AllocatedStorage/MaxAllocatedStorage values reported above) that RDS Storage Autoscaling is configured with headroom sufficient for the organization-defined audit record storage requirement.' do
-    skip 'Verify (from the AllocatedStorage/MaxAllocatedStorage values reported above) that RDS Storage Autoscaling is configured with headroom sufficient for the organization-defined audit record storage requirement.'
+  checks = [
+    rds_check('RDS storage') do
+      allocated = conn.aws_instance_attr('AllocatedStorage')
+      maximum = conn.aws_instance_attr('MaxAllocatedStorage')
+      [allocated.to_i.positive?, "#{allocated} GiB allocated, autoscaling #{maximum ? "up to #{maximum} GiB" : 'off'}"]
+    end
+  ]
+  manual_note = 'Manually verify that PostgreSQL has not run out of audit log space since storage was last allocated, and that the allocated storage and autoscaling limit (listed above) leave headroom for the organization-defined audit record storage requirement.'
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
 end

@@ -43,11 +43,14 @@ control 'V-283674' do
   conn = rds_connection
   sql = conn.sql_session(input('pg_dba_password'))
 
-  describe sql.query('SHOW server_version;', [conn.db]) do
-    its('output.strip') { should match(/\A\d+(\.\d+)*/) }
-  end
-
-  describe 'Manually verify against the current PostgreSQL / Crunchy Data support lifecycle that the running major version (reported above) is still vendor-supported.' do
-    skip 'Manually verify against the current PostgreSQL / Crunchy Data support lifecycle that the running major version (reported above) is still vendor-supported.'
+  checks = [
+    rds_check('PostgreSQL server version') do
+      version = sql.query('SHOW server_version;', [conn.db]).output.strip
+      [version.match?(/\A\d+(\.\d+)*/), version.empty? ? '(no output)' : version]
+    end
+  ]
+  manual_note = 'Manually verify against the current PostgreSQL / Crunchy Data support lifecycle that the major version listed above is still vendor-supported.'
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
 end

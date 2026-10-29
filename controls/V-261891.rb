@@ -52,26 +52,22 @@ control 'V-261891' do
   conn = rds_connection
   sql = conn.sql_session(input('pg_dba_password'))
 
-  describe sql.query('SHOW password_encryption;', [conn.db]) do
-    its('output.strip') { should cmp input('pg_password_encryption') }
-  end
-
   # Roles whose stored password isn't a SCRAM-SHA-256 hash, e.g. md5 hashes from before
   # password_encryption was changed. Roles with no password (IAM-only roles) are left out:
-  # they have nothing stored. RDS doesn't let the master user read pg_shadow, so if access
-  # is denied this part becomes a manual review; any other query error fails the control.
+  # they have nothing stored. If this login can't read pg_shadow, that part becomes a
+  # manual review; any other query error fails the control.
+  checks = [rds_setting_check(conn, sql, 'password_encryption', input('pg_password_encryption')), rds_apply_status_check(conn)]
+  manual_note = nil
   stored_passwords = sql.query("SELECT usename FROM pg_shadow WHERE passwd IS NOT NULL AND passwd NOT LIKE 'SCRAM-SHA-256%';", [conn.db])
   if stored_passwords.output =~ /permission denied/i
-    manual_note = 'This login cannot read pg_shadow (RDS denies it even to the master user), so stored password hashes cannot be checked. Manually confirm every password-authenticated role had its password set or reset while password_encryption was scram-sha-256, or set rds.accepted_password_auth_method to scram so roles with older hashes cannot log in.'
-    describe manual_note do
-      skip manual_note
-    end
+    manual_note = "#{conn.dba} cannot read pg_shadow, so stored password hashes were not checked. Manually check them as a role that can read pg_shadow (whether the master user can on RDS has not been verified): every role with a stored password must have a SCRAM-SHA-256 hash. If no role can, confirm every password was set or reset while password_encryption was scram-sha-256; with rds.accepted_password_auth_method set to scram (V-261892), roles with older hashes cannot log in."
   else
-    describe 'Roles with a stored password that is not a SCRAM-SHA-256 hash' do
-      subject { stored_passwords.output }
-      it { should be_empty }
+    checks << rds_check('Roles with a stored password that is not a SCRAM-SHA-256 hash') do
+      output = stored_passwords.output.strip
+      [output.empty?, output.empty? ? 'none' : output.lines.map(&:strip).join(', ')]
     end
   end
-
-  rds_check_parameter_apply_status(conn)
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
+  end
 end
