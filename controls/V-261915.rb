@@ -69,17 +69,12 @@ control 'V-261915' do
   languages, unreadable = rds_query_each_database(conn, sql, "SELECT lanname FROM pg_language WHERE lanispl AND lanname <> 'plpgsql' ORDER BY 1;", /\A[\w-]+\z/)
   installed = languages.map { |database, language| "#{language} (#{database})" }
   unapproved = languages.reject { |_, language| approved.include?(language) }.map { |database, language| "#{language} (#{database})" }
-  describe "Procedural languages besides plpgsql: #{installed.empty? ? 'none' : installed.join(', ')}" do
-    it 'should be readable in every database (the scan account needs CONNECT on each)' do
-      expect(unreadable).to be_empty
-    end
-    it 'should all be AO-authorized via the pg_approved_procedural_languages input' do
-      expect(unapproved).to be_empty
-    end
-  end
-
+  checks = [
+    rds_check('Databases readable (the scan account needs CONNECT on each)') { [unreadable.empty?, unreadable.empty? ? 'all' : "unreadable: #{unreadable.join(', ')}"] },
+    rds_check('Procedural languages besides plpgsql, AO-authorized via pg_approved_procedural_languages') { [unapproved.empty?, rds_approval_summary(installed, unapproved)] }
+  ]
   manual_note = 'Manually verify that the system documentation defines which PostgreSQL functionality is privileged, and that the configuration (role grants, function privileges) protects all of it from nonprivileged users.'
-  describe manual_note do
-    skip manual_note
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
 end

@@ -204,6 +204,11 @@ inputs:
   type: boolean
   value: false
 
+- name: pg_public_access_approved
+  description: "Whether a publicly accessible RDS instance (PubliclyAccessible) is a documented, approved exception (V-261889/V-261926). false makes public access a finding"
+  type: boolean
+  value: false
+
 - name: pg_approved_ingress_cidrs
   description: "IPv4/IPv6 CIDR blocks and prefix-list IDs approved by the organization's PPSM CAL/vulnerability assessment to reach the database port (V-261889/V-261926). Any other source is a finding; 0.0.0.0/0 and ::/0 are always a finding"
   type: array

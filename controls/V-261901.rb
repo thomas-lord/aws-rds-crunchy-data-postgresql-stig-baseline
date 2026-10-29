@@ -44,12 +44,15 @@ control 'V-261901' do
     conn = rds_connection
     sql = conn.sql_session(input('pg_dba_password'))
 
-    rds_check_storage_encryption(conn)
-
+    checks, manual_note = rds_storage_encryption_checks(conn)
     # In-database encryption: the STIG requires pgcrypto to be *available* (listed in
     # pg_available_extensions), not necessarily installed via CREATE EXTENSION.
-    describe sql.query("SELECT default_version FROM pg_available_extensions WHERE name='pgcrypto';", [conn.db]) do
-      its('output.strip') { should match(/\A\d+(\.\d+)*\z/) }
+    checks << rds_check('pgcrypto available (pg_available_extensions)') do
+      version = sql.query("SELECT default_version FROM pg_available_extensions WHERE name='pgcrypto';", [conn.db]).output.strip
+      [version.match?(/\A\d+(\.\d+)*\z/), version.empty? ? 'not available' : "version #{version}"]
+    end
+    rds_review_results(checks, manual_note).each do |result|
+      describe(result[:title]) { instance_exec(&result[:report]) }
     end
   else
     describe 'The organization has indicated (via the pg_encryption_of_data_at_rest_required input) that encryption of this data at rest is not required by the application owner/Authorizing Official; this control is Not a Finding.' do

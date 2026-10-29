@@ -174,6 +174,15 @@ module Inspec::Resources
                   --query PendingMaintenanceActions]) || []
     end
 
+    # Newer minor versions of the instance's engine that RDS offers as upgrades, e.g.
+    # ["17.10", "17.11"] for 17.9; empty when it runs the latest.
+    def newer_minor_versions
+      return [] unless aws_available?
+
+      aws_json(%W[rds describe-db-engine-versions --engine #{aws_attr('Engine')} --engine-version #{aws_attr('EngineVersion')}
+                  --query DBEngineVersions[0].ValidUpgradeTarget[?IsMajorVersionUpgrade==`false`].EngineVersion]) || []
+    end
+
     # Who manages a KMS key: "CUSTOMER" for a customer-managed key, "AWS" for an
     # AWS-managed one such as aws/rds. Looked up once per key per scan (errors too);
     # raises on failure, e.g. without kms:DescribeKey permission.

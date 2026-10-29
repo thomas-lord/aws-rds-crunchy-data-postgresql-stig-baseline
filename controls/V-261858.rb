@@ -49,13 +49,24 @@ control 'V-261858' do
   tag nist: ["AC-2 (1)"]
   conn = rds_connection
   rds_only_if_aws(conn)
+  sql = conn.sql_session(input('pg_dba_password'))
 
-  describe 'RDS IAM database authentication (IAMDatabaseAuthenticationEnabled)' do
-    subject { conn.aws_instance_attr('IAMDatabaseAuthenticationEnabled') }
-    it { should cmp true }
-  end
-
-  describe 'If the organization instead uses Kerberos/Active Directory authentication for this instance (DomainMemberships), manually verify that via `aws rds describe-db-instances` rather than IAM database authentication.' do
-    skip 'If the organization instead uses Kerberos/Active Directory authentication for this instance (DomainMemberships), manually verify that via `aws rds describe-db-instances` rather than IAM database authentication.'
+  # On RDS the organization-level mechanisms are IAM database authentication and Kerberos
+  # (Active Directory, shown as DomainMemberships). Either counts. Login roles that aren't
+  # members of rds_iam still authenticate by password; they are listed for the review.
+  checks = [
+    rds_check('Organization-level authentication (IAM database authentication or Kerberos)') do
+      iam = conn.aws_instance_attr('IAMDatabaseAuthenticationEnabled')
+      domains = (conn.aws_instance_attr('DomainMemberships') || []).select { |d| d['Status'].to_s.casecmp?('joined') }.map { |d| d['Domain'] }
+      [iam == true || !domains.empty?, "IAM #{iam == true ? 'enabled' : 'disabled'}, Kerberos #{domains.empty? ? 'none' : domains.join(', ')}"]
+    end,
+    rds_check('Login roles authenticating by password (not members of rds_iam)') do
+      rows = sql.query("SELECT rolname FROM pg_roles WHERE rolcanlogin AND rolname <> 'rdsadmin' AND NOT pg_has_role(oid, 'rds_iam', 'MEMBER') ORDER BY 1;", [conn.db]).lines
+      [rows.none? { |row| row =~ /\A(psql:|ERROR:|FATAL:)/i }, rows.empty? ? 'none' : rows.join(', ')]
+    end
+  ]
+  manual_note = 'Manually verify that accounts authenticate through IAM or Kerberos, and that each login role authenticating by password (listed above) is documented and approved.'
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
 end

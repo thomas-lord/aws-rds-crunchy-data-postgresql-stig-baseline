@@ -37,31 +37,27 @@ module RdsStigHelpers
     end
   end
 
-  # Checks a setting RDS hides from logins without rds_superuser, such as rds.force_ssl:
-  # SHOW reports it as unrecognized. With AWS discovery the value comes from the instance's
-  # parameter group (pair this with rds_check_parameter_apply_status); without it, SHOW is
-  # tried, and a hidden setting becomes a manual-review skip.
-  def rds_check_hidden_parameter(conn, sql, name, expected)
+  # A setting RDS hides from logins without rds_superuser, such as rds.force_ssl (SHOW
+  # reports it as unrecognized), as [check, manual_note] for rds_review_results. With AWS
+  # discovery the value comes from the instance's parameter group (pair this with
+  # rds_apply_status_check); without it SHOW is tried, and a hidden setting becomes a
+  # manual note instead of a check.
+  def rds_hidden_parameter_check(conn, sql, name, expected)
     if conn.aws_available?
-      describe "RDS DB parameter group setting #{name}" do
-        subject { conn.db_parameter(name) }
-        it { should cmp expected }
+      check = rds_check("#{name} in the RDS DB parameter group (expected #{expected})") do
+        value = conn.db_parameter(name)
+        [value.to_s.casecmp?(expected), value || 'unset']
       end
-      return
+      return [check, nil]
     end
 
-    result = sql.query("SHOW #{name};", [conn.db])
-    if result.output.include?('unrecognized configuration parameter')
-      manual_note = "#{name} is hidden from #{conn.dba}, which lacks rds_superuser, and AWS CLI discovery is off; manually verify it is #{expected} in the instance's DB parameter group."
-      describe manual_note do
-        skip manual_note
-      end
-      return
+    value = sql.query("SHOW #{name};", [conn.db]).output.strip
+    if value.include?('unrecognized configuration parameter')
+      return [nil, "#{name} is hidden from #{conn.dba}, which lacks rds_superuser, and AWS CLI discovery is off; " \
+                   "manually verify it is #{expected} in the instance's DB parameter group."]
     end
 
-    describe result do
-      its('output.strip') { should cmp expected }
-    end
+    [rds_check("#{name} (expected #{expected})") { [value.casecmp?(expected), value] }, nil]
   end
 
   # Databases the per-database checks visit: every one that accepts connections except
@@ -91,32 +87,43 @@ module RdsStigHelpers
     [rows, unreadable]
   end
 
-  # Disk-level encryption at rest (V-261901, V-261930, V-261931). On RDS this is storage
-  # encryption with a KMS key, which covers the data volume, automated backups, snapshots
-  # and read replicas. With pg_require_customer_managed_kms_key set, the key must also be
-  # customer-managed rather than AWS-managed (aws/rds). Without AWS discovery this is a
-  # manual-review skip.
-  def rds_check_storage_encryption(conn)
+  # PubliclyAccessible gives the endpoint a public IP, leaving security groups as the only
+  # barrier. Acceptable only as a documented exception, set with pg_public_access_approved.
+  # Callers must assert something in a describe of their own (see inspec check note above).
+  def rds_check_public_access(conn)
+    return if input('pg_public_access_approved')
+
+    describe 'RDS instance public accessibility (PubliclyAccessible)' do
+      subject { conn.aws_instance_attr('PubliclyAccessible') }
+      it { should cmp false }
+    end
+  end
+
+  # Disk-level encryption at rest (V-261901, V-261930, V-261931), as [checks, manual_note]
+  # for rds_review_results. On RDS this is storage encryption with a KMS key, which covers
+  # the data volume, automated backups, snapshots and read replicas. With
+  # pg_require_customer_managed_kms_key set, the key must also be customer-managed rather
+  # than AWS-managed (aws/rds). Without AWS discovery it's a manual note.
+  def rds_storage_encryption_checks(conn)
     unless conn.aws_available?
-      manual_note = 'RDS storage encryption at rest cannot be checked without AWS CLI discovery (aws_db_instance_identifier + aws CLI); manually verify "Encryption: Enabled" with a KMS key on the instance\'s Configuration tab in the RDS console.'
-      describe manual_note do
-        skip manual_note
+      return [[], 'RDS storage encryption at rest cannot be checked without AWS CLI discovery (aws_db_instance_identifier + ' \
+                  'aws CLI); manually verify "Encryption: Enabled" with a KMS key on the instance\'s Configuration tab in the RDS console.']
+    end
+
+    checks = [
+      rds_check('RDS storage encryption at rest') do
+        encrypted = conn.aws_instance_attr('StorageEncrypted')
+        [encrypted == true, "StorageEncrypted #{encrypted.inspect}, KmsKeyId #{conn.aws_instance_attr('KmsKeyId') || 'none'}"]
       end
-      return
+    ]
+    if input('pg_require_customer_managed_kms_key')
+      checks << rds_check('KMS key is customer-managed (CUSTOMER, not AWS-managed aws/rds)') do
+        key_id = conn.aws_instance_attr('KmsKeyId')
+        manager = key_id && conn.kms_key_manager(key_id)
+        [manager.to_s.casecmp?('CUSTOMER'), "#{manager || 'no key'} (#{key_id || 'none'})"]
+      end
     end
-
-    key_id = conn.aws_instance_attr('KmsKeyId')
-    describe "RDS storage encryption at rest (KmsKeyId: #{key_id || 'none'})" do
-      subject { conn.aws_instance_attr('StorageEncrypted') }
-      it { should cmp true }
-    end
-
-    return unless input('pg_require_customer_managed_kms_key')
-
-    describe "KMS key manager for RDS storage encryption (#{key_id || 'no key'}); CUSTOMER is customer-managed, AWS is AWS-managed" do
-      subject { key_id && conn.kms_key_manager(key_id) }
-      it { should cmp 'CUSTOMER' }
-    end
+    [checks, nil]
   end
 
   PGAUDIT_LOG_CLASSES = %w[read write function role ddl misc misc_set].freeze

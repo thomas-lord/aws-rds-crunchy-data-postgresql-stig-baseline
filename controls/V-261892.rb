@@ -45,15 +45,13 @@ control 'V-261892' do
 
   # Both rds.* settings are hidden from logins without rds_superuser (such as an audit
   # account), so they're read from the parameter group when AWS discovery is on.
-  rds_check_hidden_parameter(conn, sql, 'rds.accepted_password_auth_method', 'scram')
-
-  describe sql.query('SHOW password_encryption;', [conn.db]) do
-    its('output.strip') { should cmp input('pg_password_encryption') }
+  # rds.force_ssl encrypts the whole connection, so even the SCRAM exchange never crosses
+  # the network in the clear.
+  auth_check, auth_note = rds_hidden_parameter_check(conn, sql, 'rds.accepted_password_auth_method', 'scram')
+  ssl_check, ssl_note = rds_hidden_parameter_check(conn, sql, 'rds.force_ssl', '1')
+  checks = [auth_check, rds_setting_check(conn, sql, 'password_encryption', input('pg_password_encryption')), ssl_check, rds_apply_status_check(conn)]
+  manual_note = rds_manual_note(auth_note, ssl_note)
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
-
-  # rds.force_ssl encrypts the whole connection, so even the SCRAM exchange never crosses the
-  # network in the clear.
-  rds_check_hidden_parameter(conn, sql, 'rds.force_ssl', '1')
-
-  rds_check_parameter_apply_status(conn)
 end

@@ -53,17 +53,12 @@ control 'V-261916' do
   found = functions.map { |database, row| "#{row.split('|')[0]} owned by #{row.split('|')[1]} (#{database})" }
   unapproved = functions.reject { |_, row| approved.include?(row.split('|')[0]) }
                         .map { |database, row| "#{row.split('|')[0]} (#{database})" }
-  describe "SECURITY DEFINER functions outside system schemas and extensions: #{found.empty? ? 'none' : found.join(', ')}" do
-    it 'should be readable in every database (the scan account needs CONNECT on each)' do
-      expect(unreadable).to be_empty
-    end
-    it 'should all be documented and approved via the pg_approved_security_definer_functions input' do
-      expect(unapproved).to be_empty
-    end
-  end
-
+  checks = [
+    rds_check('Databases readable (the scan account needs CONNECT on each)') { [unreadable.empty?, unreadable.empty? ? 'all' : "unreadable: #{unreadable.join(', ')}"] },
+    rds_check('SECURITY DEFINER functions outside system schemas and extensions, approved via pg_approved_security_definer_functions') { [unapproved.empty?, rds_approval_summary(found, unapproved)] }
+  ]
   manual_note = 'Manually verify that each approved SECURITY DEFINER function is implemented as documented and can be invoked only in the intended ways, contexts and by the intended roles (check its EXECUTE grants).'
-  describe manual_note do
-    skip manual_note
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
 end

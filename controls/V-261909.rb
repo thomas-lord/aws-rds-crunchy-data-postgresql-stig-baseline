@@ -73,15 +73,11 @@ control 'V-261909' do
   conn = rds_connection
   sql = conn.sql_session(input('pg_dba_password'))
 
-  describe sql.query('SHOW client_min_messages;', [conn.db]) do
-    its('output.strip') { should cmp input('pg_client_min_messages') }
-  end
-
+  checks = [rds_setting_check(conn, sql, 'client_min_messages', input('pg_client_min_messages')), rds_apply_status_check(conn)]
   # Log file permissions can't be checked or set on RDS (log_file_mode is fixed at 0644), so
   # that half of the check is manual.
-  describe 'On RDS, log_file_mode is fixed at 0644 and cannot be changed, and the log files are not on a file system anyone can reach: they can only be read through the RDS API (rds:DownloadDBLogFilePortion, rds:DownloadCompleteDBLogFile) or, when exported, CloudWatch Logs (logs:GetLogEvents, logs:FilterLogEvents, logs:StartQuery). Manually verify that only authorized personnel (ISSO, ISSM, SA, DBA) have IAM permissions to read them.' do
-    skip 'On RDS, log_file_mode is fixed at 0644 and cannot be changed, and the log files are not on a file system anyone can reach: they can only be read through the RDS API (rds:DownloadDBLogFilePortion, rds:DownloadCompleteDBLogFile) or, when exported, CloudWatch Logs (logs:GetLogEvents, logs:FilterLogEvents, logs:StartQuery). Manually verify that only authorized personnel (ISSO, ISSM, SA, DBA) have IAM permissions to read them.'
+  manual_note = 'On RDS, log_file_mode is fixed at 0644 and cannot be changed, and the log files are not on a file system anyone can reach: they can only be read through the RDS API (rds:DownloadDBLogFilePortion, rds:DownloadCompleteDBLogFile) or, when exported, CloudWatch Logs (logs:GetLogEvents, logs:FilterLogEvents, logs:StartQuery). Manually verify that only authorized personnel (ISSO, ISSM, SA, DBA) have IAM permissions to read them.'
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
-
-  rds_check_parameter_apply_status(conn)
 end

@@ -80,17 +80,12 @@ control 'V-261923' do
            database_rows.grep(/\A[^|]+\|[^|]+\z/).map { |row| ["database #{row.split('|')[0]}", row.split('|')[1]] }
   found = grants.map { |object, grantee| "#{grantee} on #{object}" }
   unapproved = grants.reject { |_, grantee| approved.include?(grantee) }.map { |object, grantee| "#{grantee} on #{object}" }
-  describe "CREATE on schemas and databases granted to non-owners: #{found.empty? ? 'none' : found.join(', ')}" do
-    it 'should be readable in every database (the scan account needs CONNECT on each)' do
-      expect(unreadable).to be_empty
-    end
-    it 'should not be granted to PUBLIC or roles missing from the pg_approved_schema_creators input' do
-      expect(unapproved).to be_empty
-    end
-  end
-
+  checks = [
+    rds_check('Databases readable (the scan account needs CONNECT on each)') { [unreadable.empty?, unreadable.empty? ? 'all' : "unreadable: #{unreadable.join(', ')}"] },
+    rds_check('CREATE on schemas and databases granted to non-owners, never PUBLIC and only roles in pg_approved_schema_creators') { [unapproved.empty?, rds_approval_summary(found, unapproved)] }
+  ]
   manual_note = 'Manually verify that the roles owning databases and schemas, which can always create objects in them, are administrative roles documented as approved. (Not a finding if this instance only supports development or experimentation.)'
-  describe manual_note do
-    skip manual_note
+  rds_review_results(checks, manual_note).each do |result|
+    describe(result[:title]) { instance_exec(&result[:report]) }
   end
 end

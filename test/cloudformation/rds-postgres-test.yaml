@@ -195,12 +195,18 @@ Resources:
         - Key: Purpose
           Value: stig-profile-testing
 
-  # Warns at 75% of the 20 GiB volume used (5 GiB free). Add AlarmActions, such as an SNS
-  # topic, to actually notify support staff.
+  # Where the free-storage alarm sends its warning. Subscribe support staff to it (e.g. by
+  # email) for the warning to reach anyone.
+  StorageAlarmTopic:
+    Type: AWS::SNS::Topic
+    Condition: UseStigParameters
+
+  # Warns at 75% of the 20 GiB volume used (5 GiB free).
   FreeStorageAlarm:
     Type: AWS::CloudWatch::Alarm
     Condition: UseStigParameters
     Properties:
+      AlarmActions: [!Ref StorageAlarmTopic]
       AlarmDescription: !Sub 'RDS ${Database} free storage below 25 percent'
       Namespace: AWS/RDS
       MetricName: FreeStorageSpace
