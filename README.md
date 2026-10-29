@@ -36,11 +36,12 @@ Install these on the runner host, which needs network access to the RDS instance
 
 The AWS credentials need read-only access to `rds:DescribeDBInstances`, `rds:DescribeDBParameters`,
 `rds:DescribeDBEngineVersions`, `rds:DescribePendingMaintenanceActions`, `ec2:DescribeSecurityGroups` and
-`cloudwatch:DescribeAlarmsForMetric`, plus `kms:DescribeKey` if you set `pg_require_customer_managed_kms_key`.
+`cloudwatch:DescribeAlarmsForMetric`, plus `kms:DescribeKey` if you set `pg_require_customer_managed_kms_key` and
+`iam:SimulatePrincipalPolicy` if you set `pg_audit_config_denied_principals`.
 
 ## Inputs
 
-Usually only these are needed:
+All inputs are described in **[INPUTS.md](INPUTS.md)**. To connect, only these are needed:
 
 ```yaml
 aws_db_instance_identifier: '<rds-db-instance-id>'   # the instance ID, not the endpoint
@@ -72,12 +73,12 @@ flag it. Extensions, functions and schema privileges are checked in every databa
 `CONNECT` on each one. PUBLIC has it by default, so this only matters where it was revoked.
 
 Every other input has a STIG-aligned default. Change one only if your System Security Plan specifies a different
-value. [inputs.yml.example](inputs.yml.example) lists them all, and [inspec.yml](inspec.yml) describes each one.
+value.
 
-Some inputs are approval lists: anything the scan finds that isn't listed is a finding. They cover extensions
-(`pg_approved_extensions`, default `pgaudit`), procedural languages, `SECURITY DEFINER` functions, roles allowed to
-create objects in schemas and databases (`pg_approved_schema_creators`), `rds_superuser` holders and security group
-sources. Each finding names what to add, and listing it records the approval in your inputs file.
+The exception is the approval lists, which record what your organization has documented and approved: password
+logins, admin roles, table privileges, extensions, security group sources and more. Most start empty, so fill them in
+before the first real scan. Anything the scan finds that isn't listed is a finding, and the result names what to
+add. See [Approval lists](INPUTS.md#approval-lists).
 
 ## How it works
 
@@ -101,16 +102,17 @@ log export, alarms, maintenance, IAM auth) call the AWS CLI.
 | Checked by | Controls |
 |---|---|
 | SQL: pgaudit loaded and logging the required classes | 29 |
-| SQL: database settings, superusers, extensions, privileges, SSL, version | 28 |
+| SQL: database settings, superusers, extensions, privileges, SSL, version | 30 |
 | AWS CLI: security groups, log export, IAM auth, storage, alarms, maintenance | 8 |
 | AWS CLI + SQL: encryption at rest | 3 |
-| Manual review (needs organizational policy, documents or an IAM review) | 32 |
+| Manual review (needs organizational policy, documents or an IAM review) | 30 |
 | Not applicable on RDS (AWS manages the OS and FIPS) | 11 |
 
 Ten of the automated controls also have a manual step, so a compliant instance shows them as Not Reviewed with the
-automated results attached. Scanned with AWS discovery, a compliant instance comes out as 58 Passed and 53 Not Reviewed
-(the 43 manual and not-applicable controls plus those 10). Without AWS discovery, more controls become Not Reviewed,
-since the parts only AWS can answer turn into manual steps.
+automated results attached. Scanned with AWS discovery, a compliant instance shows in Heimdall as 60 Passed, 40 Not
+Reviewed (the 30 manual controls plus those 10) and 11 Not Applicable (impact 0). Setting
+`pg_audit_config_denied_principals` checks V-261862 in full, making it 61 Passed. Without AWS discovery, more controls
+become Not Reviewed, since the parts only AWS can answer turn into manual steps.
 
 ## Producing a `.ckl` for eMASS
 
